@@ -248,7 +248,7 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
     production_note: 'Catatan produksi',
     caption: 'Caption',
     account: 'Akun',
-    pillar: 'Pilar',
+    pillar: 'Category Content',
     status: 'Status',
     deadline: 'Deadline',
     publish_date: 'Tanggal tayang',
@@ -494,7 +494,7 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                     </select>
                   </div>
                   <div className="field">
-                    <label>Pilar{noteBtn('pillar')}</label>
+                    <label>Category Content{noteBtn('pillar')}</label>
                     <select value={form.pillar} disabled={readOnly} onChange={(e) => setForm({ ...form, pillar: e.target.value as Pillar })}>
                       {(Object.keys(PILLAR_LABEL) as Pillar[]).map((p) => <option key={p} value={p}>{PILLAR_LABEL[p]}</option>)}
                     </select>
