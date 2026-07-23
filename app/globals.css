@@ -382,3 +382,15 @@ td select {
 .nav-item .nav-svg { flex-shrink: 0; opacity: .85; }
 .nav-item.active .nav-svg { color: var(--accent); opacity: 1; }
 .theme-btn { display: flex; align-items: center; justify-content: center; }
+
+/* ================= Fix overflow teks panjang / link ================= */
+.card-title {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.card-acc, .feed-text, td, .modal-sub { overflow-wrap: anywhere; }
+.col-body { overflow: hidden; }
