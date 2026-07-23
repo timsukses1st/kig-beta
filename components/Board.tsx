@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import {
   DIVISIONS, PILLAR_LABEL, STATUSES,
   canEditRow, initials, statusDef, targetableStatuses,
-  type Account, type ContentRow, type ContentStatus, type Division, type Pillar, type Profile, type TeamMember,
+  type Account, type ContentRow, type ContentStatus, type Division, type Pillar, type Profile, type TeamMember, type ContentNote,
 } from '@/lib/types';
 
 interface Props {
@@ -33,6 +33,17 @@ const EMPTY_FORM = {
   potensi_fyp: false,
 };
 
+const isUrl = (s: string | null | undefined) => !!s && /^https?:\/\//i.test(s.trim());
+
+const growRef = (el: HTMLTextAreaElement | null) => {
+  if (el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight + 2, 340) + 'px';
+  }
+};
+
+const autoGrow = (e: React.FormEvent<HTMLTextAreaElement>) => growRef(e.currentTarget);
+
 export default function Board({ profile, accounts, accountFilter }: Props) {
   const [rows, setRows] = useState<ContentRow[]>([]);
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -44,6 +55,9 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [notes, setNotes] = useState<ContentNote[]>([]);
+  const [newNote, setNewNote] = useState('');
+  const [noteBusy, setNoteBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -114,13 +128,46 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
 
   const openCreate = () => {
     setEditing(null);
+    setNotes([]);
+    setNewNote('');
     setForm({ ...EMPTY_FORM, account_id: accountFilter !== 'all' ? accountFilter : (accounts[0]?.id || '') });
     setError('');
     setModalOpen(true);
   };
 
+  const loadNotes = async (contentId: string) => {
+    const { data } = await supabase
+      .from('content_notes')
+      .select('*')
+      .eq('content_id', contentId)
+      .order('created_at', { ascending: true });
+    setNotes((data as ContentNote[]) || []);
+  };
+
+  const addNote = async () => {
+    if (!editing || !newNote.trim() || !profile) return;
+    setNoteBusy(true);
+    const { error: err } = await supabase.from('content_notes').insert({
+      content_id: editing.id,
+      author_id: profile.id,
+      author_name: profile.full_name || profile.email,
+      note: newNote.trim(),
+    });
+    setNoteBusy(false);
+    if (!err) { setNewNote(''); loadNotes(editing.id); }
+  };
+
+  const deleteNote = async (n: ContentNote) => {
+    if (!editing) return;
+    await supabase.from('content_notes').delete().eq('id', n.id);
+    loadNotes(editing.id);
+  };
+
   const openEdit = (row: ContentRow) => {
     setEditing(row);
+    setNotes([]);
+    setNewNote('');
+    loadNotes(row.id);
     setForm({
       title: row.title,
       account_id: row.account_id || '',
@@ -294,14 +341,21 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                 <div className="field">
                   <label>Hook / Brief</label>
                   <textarea
+                    ref={growRef}
                     value={form.title}
                     disabled={readOnly}
+                    onInput={autoGrow}
                     onChange={(e) => setForm({ ...form, title: e.target.value })}
                     placeholder="Tulis hook & brief konten… mis. 5 film Indonesia hidden gem bulan ini"
                   />
                 </div>
                 <div className="field">
-                  <label>Visual Hook (referensi)</label>
+                  <label>
+                    Visual Hook (referensi)
+                    {isUrl(form.visual_hook) && (
+                      <a className="open-link" href={form.visual_hook.trim()} target="_blank" rel="noopener noreferrer">Buka ↗</a>
+                    )}
+                  </label>
                   <input
                     value={form.visual_hook}
                     disabled={readOnly}
@@ -312,8 +366,10 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                 <div className="field">
                   <label>Catatan produksi</label>
                   <textarea
+                    ref={growRef}
                     value={form.production_note}
                     disabled={readOnly}
+                    onInput={autoGrow}
                     onChange={(e) => setForm({ ...form, production_note: e.target.value })}
                     placeholder="mis. Ambil 3 detik pertama · gaya cepat"
                   />
@@ -321,12 +377,44 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                 <div className="field">
                   <label>Caption (diisi Distribution)</label>
                   <textarea
+                    ref={growRef}
                     value={form.caption}
                     disabled={readOnly}
+                    onInput={autoGrow}
                     onChange={(e) => setForm({ ...form, caption: e.target.value })}
                     placeholder="Caption final untuk upload"
                   />
                 </div>
+                {editing && (
+                  <div className="notes-box">
+                    <div className="modal-col-label">Catatan ({notes.length})</div>
+                    {notes.length === 0 && <div className="notes-empty">Belum ada catatan. Semua tim bisa menulis di sini.</div>}
+                    {notes.map((n) => (
+                      <div className="note-item" key={n.id}>
+                        <span className="row-avatar note-avatar">{initials(n.author_name)}</span>
+                        <div className="note-body">
+                          <div className="note-meta">
+                            <b>{n.author_name || 'anonim'}</b>
+                            <span>{new Date(n.created_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
+                          <div className="note-text">{n.note}</div>
+                        </div>
+                        {(profile?.id === n.author_id || canDelete) && (
+                          <button className="note-del" title="Hapus catatan" onClick={() => deleteNote(n)}>✕</button>
+                        )}
+                      </div>
+                    ))}
+                    <div className="note-input">
+                      <input
+                        value={newNote}
+                        placeholder="Tulis catatan… (semua tim bisa)"
+                        onChange={(e) => setNewNote(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && addNote()}
+                      />
+                      <button className="btn" onClick={addNote} disabled={noteBusy || !newNote.trim()}>Kirim</button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div>
                 <div className="modal-col-label">Detail &amp; aset</div>
@@ -387,7 +475,12 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                   </div>
                 </div>
                 <div className="field">
-                  <label>Link Drive (aset jadi)</label>
+                  <label>
+                    Link Drive (aset jadi)
+                    {isUrl(form.asset_url) && (
+                      <a className="open-link" href={form.asset_url.trim()} target="_blank" rel="noopener noreferrer">Buka ↗</a>
+                    )}
+                  </label>
                   <input
                     value={form.asset_url}
                     disabled={readOnly}
