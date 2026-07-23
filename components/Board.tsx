@@ -44,6 +44,31 @@ const growRef = (el: HTMLTextAreaElement | null) => {
 
 const autoGrow = (e: React.FormEvent<HTMLTextAreaElement>) => growRef(e.currentTarget);
 
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+// **teks** -> <b>teks</b> (aman: semua HTML lain di-escape dulu)
+const mdToHtml = (s: string) =>
+  escapeHtml(s).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+
+// serialisasi balik contentEditable -> teks dengan **bold**
+const htmlToMd = (node: Node): string => {
+  let out = '';
+  node.childNodes.forEach((child) => {
+    if (child.nodeType === Node.TEXT_NODE) {
+      out += child.textContent || '';
+    } else if (child.nodeType === Node.ELEMENT_NODE) {
+      const el = child as HTMLElement;
+      const tag = el.tagName;
+      if (tag === 'B' || tag === 'STRONG') out += '**' + htmlToMd(el) + '**';
+      else if (tag === 'BR') out += '\n';
+      else if (tag === 'DIV' || tag === 'P') out += '\n' + htmlToMd(el);
+      else out += htmlToMd(el);
+    }
+  });
+  return out;
+};
+
 export default function Board({ profile, accounts, accountFilter }: Props) {
   const [rows, setRows] = useState<ContentRow[]>([]);
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -381,7 +406,7 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                       onClick={() => openEdit(row)}
                       title={editable ? 'Klik untuk edit' : 'Lihat detail (tahap ini dikelola tim lain)'}
                     >
-                      <div className="card-title">{row.title}</div>
+                      <div className="card-title" dangerouslySetInnerHTML={{ __html: mdToHtml(row.title) }} />
                       <div className="card-acc">
                         <span className="sq" />
                         {accName(row.account_id)}
@@ -432,14 +457,37 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                 <div className="modal-col-label">Brief utama</div>
                 <div className="field">
                   <label>Hook / Brief{noteBtn('title')}</label>
-                  <textarea
-                    ref={growRef}
-                    value={form.title}
-                    disabled={readOnly}
-                    onInput={autoGrow}
-                    onChange={(e) => setForm({ ...form, title: e.target.value })}
-                    placeholder="Tulis hook & brief konten… mis. 5 film Indonesia hidden gem bulan ini"
+                  <div
+                    className={`rich-input ${readOnly ? 'ro' : ''}`}
+                    contentEditable={!readOnly}
+                    suppressContentEditableWarning
+                    data-placeholder="Tulis hook & brief konten… mis. 5 film Indonesia hidden gem bulan ini"
+                    ref={(el) => {
+                      const key = editing ? editing.id : 'new';
+                      if (el && el.dataset.init !== key) {
+                        el.innerHTML = mdToHtml(form.title);
+                        el.dataset.init = key;
+                      }
+                    }}
+                    onInput={(e) => {
+                      const md = htmlToMd(e.currentTarget).replace(/^\n+/, '');
+                      setForm((f) => ({ ...f, title: md }));
+                    }}
+                    onKeyDown={(e) => {
+                      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+                        e.preventDefault();
+                        document.execCommand('bold');
+                        const md = htmlToMd(e.currentTarget).replace(/^\n+/, '');
+                        setForm((f) => ({ ...f, title: md }));
+                      }
+                    }}
+                    onPaste={(e) => {
+                      e.preventDefault();
+                      const text = e.clipboardData.getData('text/plain');
+                      document.execCommand('insertText', false, text);
+                    }}
                   />
+                  <div className="hint">Blok teks lalu tekan Ctrl+B untuk bold.</div>
                 </div>
                 <div className="field">
                   <label>
