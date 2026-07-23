@@ -515,3 +515,14 @@ td select {
   border-radius: 8px; padding: 6px;
   opacity: .8;
 }
+
+/* ================= Status by sistem ================= */
+.status-chip {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--raised); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 11px;
+  font-size: 13px; font-weight: 700;
+}
+.status-chip .sq { width: 9px; height: 9px; border-radius: 2.5px; }
+.flow-btn { width: 100%; margin-top: 8px; }
+.flow-back { width: 100%; margin-top: 6px; font-size: 12px; }
