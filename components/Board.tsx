@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import {
   DIVISIONS, PILLAR_LABEL, STATUSES,
   canEditRow, initials, statusDef, targetableStatuses,
-  type Account, type ContentRow, type ContentStatus, type Division, type Pillar, type Profile,
+  type Account, type ContentRow, type ContentStatus, type Division, type Pillar, type Profile, type TeamMember,
 } from '@/lib/types';
 
 interface Props {
@@ -35,7 +35,7 @@ const EMPTY_FORM = {
 
 export default function Board({ profile, accounts, accountFilter }: Props) {
   const [rows, setRows] = useState<ContentRow[]>([]);
-  const [people, setPeople] = useState<Profile[]>([]);
+  const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [division, setDivision] = useState<Division>('semua');
   const [range, setRange] = useState<Range>('all');
@@ -47,12 +47,12 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [c, p] = await Promise.all([
+    const [c, m] = await Promise.all([
       supabase.from('contents').select('*').order('updated_at', { ascending: false }),
-      supabase.from('profiles').select('*').eq('is_active', true).order('full_name'),
+      supabase.from('team_members').select('*').eq('is_active', true).order('name'),
     ]);
     setRows((c.data as ContentRow[]) || []);
-    setPeople((p.data as Profile[]) || []);
+    setMembers((m.data as TeamMember[]) || []);
     setLoading(false);
   }, []);
 
@@ -98,7 +98,9 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
   }, [filtered]);
 
   const accName = (id: string | null) => accounts.find((a) => a.id === id)?.handle || 'Akun belum ditentukan';
-  const personName = (id: string | null) => people.find((p) => p.id === id)?.full_name || null;
+  const personName = (id: string | null) => members.find((m) => m.id === id)?.name || null;
+  const membersOf = (team: 'creative' | 'distribution' | 'ads') =>
+    members.filter((m) => m.team === team || m.team === 'delta');
   const picForCard = (r: ContentRow) => {
     const team = statusDef(r.status).ownerTeam;
     const id = team === 'creative' ? r.pic_creative : team === 'distribution' ? r.pic_distribution : r.pic_ads;
@@ -365,7 +367,7 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                   <label>PIC Creative</label>
                   <select value={form.pic_creative} disabled={readOnly} onChange={(e) => setForm({ ...form, pic_creative: e.target.value })}>
                     <option value="">—</option>
-                    {people.map((p) => <option key={p.id} value={p.id}>{p.full_name || p.email}{p.team ? ` (${p.team})` : ''}</option>)}
+                    {membersOf('creative').map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                   </select>
                 </div>
                 <div className="field-row">
@@ -373,14 +375,14 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                     <label>PIC Distribution</label>
                     <select value={form.pic_distribution} disabled={readOnly} onChange={(e) => setForm({ ...form, pic_distribution: e.target.value })}>
                       <option value="">—</option>
-                      {people.map((p) => <option key={p.id} value={p.id}>{p.full_name || p.email}</option>)}
+                      {membersOf('distribution').map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                     </select>
                   </div>
                   <div className="field">
                     <label>PIC Ads</label>
                     <select value={form.pic_ads} disabled={readOnly} onChange={(e) => setForm({ ...form, pic_ads: e.target.value })}>
                       <option value="">—</option>
-                      {people.map((p) => <option key={p.id} value={p.id}>{p.full_name || p.email}</option>)}
+                      {membersOf('ads').map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                     </select>
                   </div>
                 </div>
