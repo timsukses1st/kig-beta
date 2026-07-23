@@ -430,3 +430,18 @@ td select {
   border-radius: 8px; padding: 8px 11px; font-size: 13px; outline: none;
 }
 .note-input input:focus { border-color: var(--accent); }
+
+/* ================= Catatan per-field (ala spreadsheet) ================= */
+.note-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  border: none; background: transparent; color: var(--text-3);
+  padding: 1px 5px; border-radius: 5px; margin-left: 6px;
+  font-family: var(--mono); font-size: 10px; vertical-align: middle;
+}
+.note-btn:hover { color: var(--text); background: var(--hover); }
+.note-btn.has { color: var(--amber); }
+.note-btn.open { color: var(--accent); background: var(--accent-soft); }
+.field-notes {
+  background: var(--raised); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 12px; margin-top: 8px;
+}
