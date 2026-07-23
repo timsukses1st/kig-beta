@@ -354,3 +354,26 @@ td select {
   .topbar, .content-area, .div-tabs, .div-desc { padding-left: 16px; padding-right: 16px; }
   .board { padding: 14px 16px 24px; }
 }
+
+/* ================= Sidebar collapsed ================= */
+.collapse-btn { margin-left: auto; }
+.sidebar.collapsed {
+  width: 64px;
+  padding: 18px 10px;
+  align-items: center;
+}
+.sidebar.collapsed .brand { flex-direction: column; gap: 8px; padding: 2px 0 14px; }
+.sidebar.collapsed .collapse-btn { margin-left: 0; }
+.sidebar.collapsed .nav-item {
+  justify-content: center;
+  padding: 10px 0;
+  width: 44px;
+}
+.nav-icon { font-size: 16px; line-height: 1; }
+.sidebar.collapsed .sidebar-footer { align-items: center; gap: 10px; }
+.footer-icon {
+  width: 40px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); border-radius: 9px;
+}
+.footer-icon:hover { border-color: var(--border-strong); }
