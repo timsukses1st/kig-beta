@@ -8,6 +8,7 @@ import Login from '@/components/Login';
 import Board from '@/components/Board';
 import LogView from '@/components/LogView';
 import AccessView from '@/components/AccessView';
+import CalendarView from '@/components/CalendarView';
 
 type View = 'board' | 'kalender' | 'tracker' | 'ads' | 'log' | 'access';
 
@@ -293,12 +294,7 @@ export default function App() {
 
       <main className="main">
         {view === 'board' && <Board profile={profile} accounts={accounts} accountFilter={activeAccount} />}
-        {view === 'kalender' && (
-          <Placeholder
-            title="Kalender Tayang"
-            desc="Tampilan kalender bulanan berisi konten terjadwal & tayang. Menyusul di fase berikutnya — datanya (tanggal tayang) sudah mulai terkumpul dari Board sekarang."
-          />
-        )}
+        {view === 'kalender' && <CalendarView accounts={accounts} accountFilter={activeAccount} />}
         {view === 'tracker' && (
           <Placeholder
             title="Tracker Distribution"
