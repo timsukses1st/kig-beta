@@ -483,3 +483,16 @@ td select {
 }
 .field .note-btn { margin-left: 1px; flex-shrink: 0; }
 .open-link { float: none; margin-left: auto; flex-shrink: 0; }
+
+/* ================= Editor Hook/Brief (bold Ctrl+B) ================= */
+.rich-input {
+  width: 100%; min-height: 110px; max-height: 340px; overflow-y: auto;
+  background: var(--raised); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 11px; font-size: 13.5px;
+  outline: none; line-height: 1.5; overflow-wrap: anywhere;
+  transition: border-color .12s;
+}
+.rich-input:focus { border-color: var(--accent); }
+.rich-input.ro { opacity: .7; pointer-events: none; }
+.rich-input:empty::before { content: attr(data-placeholder); color: var(--text-3); }
+.rich-input b, .card-title b { font-weight: 800; }
