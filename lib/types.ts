@@ -1,7 +1,7 @@
 export type Role = 'superadmin' | 'manager' | 'tim';
 export type Team = 'delta' | 'creative' | 'distribution' | 'ads';
 export type ContentStatus =
-  | 'ide' | 'drafting' | 'review'
+  | 'drafting' | 'review'
   | 'siap_upload' | 'terjadwal'
   | 'published' | 'diiklankan';
 export type Pillar = 'lagi_ramai' | 'wajib_tonton' | 'di_balik_layar' | 'panas_timeline';
@@ -89,7 +89,6 @@ export interface StatusDef {
 }
 
 export const STATUSES: StatusDef[] = [
-  { key: 'ide', label: 'Ide', ownerTeam: 'creative', color: 'var(--st-ide)' },
   { key: 'drafting', label: 'Drafting', ownerTeam: 'creative', color: 'var(--st-drafting)' },
   { key: 'review', label: 'Review', ownerTeam: 'creative', color: 'var(--st-review)' },
   { key: 'siap_upload', label: 'Siap Upload', ownerTeam: 'distribution', color: 'var(--st-siap)' },
@@ -102,12 +101,12 @@ export const DIVISIONS: { key: Division; label: string; color: string; desc: str
   {
     key: 'semua', label: 'Semua', color: 'var(--accent)',
     desc: 'Semua konten lintas divisi — cari & edit tanpa pindah papan.',
-    statuses: ['ide', 'drafting', 'review', 'siap_upload', 'terjadwal', 'published', 'diiklankan'],
+    statuses: ['drafting', 'review', 'siap_upload', 'terjadwal', 'published', 'diiklankan'],
   },
   {
     key: 'creative', label: 'Creative', color: 'var(--st-ide)',
-    desc: 'Ide → Drafting → Review. Menyiapkan brief, copywriting, dan aset final.',
-    statuses: ['ide', 'drafting', 'review'],
+    desc: 'Drafting → Review → ACC lead. Menyiapkan brief, copywriting, dan aset final.',
+    statuses: ['drafting', 'review'],
   },
   {
     key: 'distribution', label: 'Distribution', color: 'var(--st-terjadwal)',
@@ -122,15 +121,15 @@ export const DIVISIONS: { key: Division; label: string; color: string; desc: str
 ];
 
 export const TEAM_EDITABLE: Record<Team, ContentStatus[]> = {
-  delta: ['ide', 'drafting', 'review', 'siap_upload', 'terjadwal', 'published', 'diiklankan'],
-  creative: ['ide', 'drafting', 'review'],
+  delta: ['drafting', 'review', 'siap_upload', 'terjadwal', 'published', 'diiklankan'],
+  creative: ['drafting', 'review'],
   distribution: ['siap_upload', 'terjadwal'],
   ads: ['published', 'diiklankan'],
 };
 
 export const TEAM_TARGETABLE: Record<Team, ContentStatus[]> = {
-  delta: ['ide', 'drafting', 'review', 'siap_upload', 'terjadwal', 'published', 'diiklankan'],
-  creative: ['ide', 'drafting', 'review', 'siap_upload'],
+  delta: ['drafting', 'review', 'siap_upload', 'terjadwal', 'published', 'diiklankan'],
+  creative: ['drafting', 'review'],
   distribution: ['siap_upload', 'terjadwal', 'published'],
   ads: ['published', 'diiklankan'],
 };
