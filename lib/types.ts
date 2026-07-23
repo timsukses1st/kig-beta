@@ -58,6 +58,7 @@ export interface ContentNote {
   content_id: string;
   author_id: string | null;
   author_name: string | null;
+  field: string;
   note: string;
   created_at: string;
 }
