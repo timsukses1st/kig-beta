@@ -58,6 +58,7 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
   const [notes, setNotes] = useState<ContentNote[]>([]);
   const [newNote, setNewNote] = useState('');
   const [noteBusy, setNoteBusy] = useState(false);
+  const [openNoteField, setOpenNoteField] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -130,6 +131,7 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
     setEditing(null);
     setNotes([]);
     setNewNote('');
+    setOpenNoteField(null);
     setForm({ ...EMPTY_FORM, account_id: accountFilter !== 'all' ? accountFilter : (accounts[0]?.id || '') });
     setError('');
     setModalOpen(true);
@@ -144,13 +146,14 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
     setNotes((data as ContentNote[]) || []);
   };
 
-  const addNote = async () => {
+  const addNote = async (field: string) => {
     if (!editing || !newNote.trim() || !profile) return;
     setNoteBusy(true);
     const { error: err } = await supabase.from('content_notes').insert({
       content_id: editing.id,
       author_id: profile.id,
       author_name: profile.full_name || profile.email,
+      field,
       note: newNote.trim(),
     });
     setNoteBusy(false);
@@ -167,6 +170,7 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
     setEditing(row);
     setNotes([]);
     setNewNote('');
+    setOpenNoteField(null);
     loadNotes(row.id);
     setForm({
       title: row.title,
@@ -237,6 +241,62 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
   const statusOptions = targetableStatuses(profile, editing ? editing.status : 'ide');
   const canDelete = profile?.role === 'superadmin' || profile?.role === 'manager';
   const editingDef = statusDef(form.status);
+
+  const fieldNotes = (field: string) => notes.filter((n) => n.field === field);
+
+  const noteBtn = (field: string) => {
+    if (!editing) return null;
+    const count = fieldNotes(field).length;
+    return (
+      <button
+        type="button"
+        className={`note-btn ${count ? 'has' : ''} ${openNoteField === field ? 'open' : ''}`}
+        title={count ? `${count} catatan` : 'Tambah catatan'}
+        onClick={() => { setOpenNoteField(openNoteField === field ? null : field); setNewNote(''); }}
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+        {count > 0 && <span>{count}</span>}
+      </button>
+    );
+  };
+
+  const notePanel = (field: string) => {
+    if (!editing || openNoteField !== field) return null;
+    const list = fieldNotes(field);
+    return (
+      <div className="field-notes">
+        {list.length === 0 && <div className="notes-empty">Belum ada catatan di field ini.</div>}
+        {list.map((n) => (
+          <div className="note-item" key={n.id}>
+            <span className="row-avatar note-avatar">{initials(n.author_name)}</span>
+            <div className="note-body">
+              <div className="note-meta">
+                <b>{n.author_name || 'anonim'}</b>
+                <span>{new Date(n.created_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+              <div className="note-text">{n.note}</div>
+            </div>
+            {(profile?.id === n.author_id || canDelete) && (
+              <button className="note-del" title="Hapus catatan" onClick={() => deleteNote(n)}>✕</button>
+            )}
+          </div>
+        ))}
+        <div className="note-input">
+          <input
+            autoFocus
+            value={newNote}
+            placeholder="Tulis catatan…"
+            onChange={(e) => setNewNote(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addNote(field)}
+          />
+          <button className="btn" onClick={() => addNote(field)} disabled={noteBusy || !newNote.trim()}>Kirim</button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <>
@@ -339,7 +399,7 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
               <div>
                 <div className="modal-col-label">Brief utama</div>
                 <div className="field">
-                  <label>Hook / Brief</label>
+                  <label>Hook / Brief{noteBtn('title')}</label>
                   <textarea
                     ref={growRef}
                     value={form.title}
@@ -348,10 +408,11 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                     onChange={(e) => setForm({ ...form, title: e.target.value })}
                     placeholder="Tulis hook & brief konten… mis. 5 film Indonesia hidden gem bulan ini"
                   />
+                  {notePanel('title')}
                 </div>
                 <div className="field">
                   <label>
-                    Visual Hook (referensi)
+                    Visual Hook (referensi){noteBtn('visual_hook')}
                     {isUrl(form.visual_hook) && (
                       <a className="open-link" href={form.visual_hook.trim()} target="_blank" rel="noopener noreferrer">Buka ↗</a>
                     )}
@@ -362,9 +423,10 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                     onChange={(e) => setForm({ ...form, visual_hook: e.target.value })}
                     placeholder="Link / nama file referensi"
                   />
+                  {notePanel('visual_hook')}
                 </div>
                 <div className="field">
-                  <label>Catatan produksi</label>
+                  <label>Catatan produksi{noteBtn('production_note')}</label>
                   <textarea
                     ref={growRef}
                     value={form.production_note}
@@ -373,9 +435,10 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                     onChange={(e) => setForm({ ...form, production_note: e.target.value })}
                     placeholder="mis. Ambil 3 detik pertama · gaya cepat"
                   />
+                  {notePanel('production_note')}
                 </div>
                 <div className="field">
-                  <label>Caption (diisi Distribution)</label>
+                  <label>Caption (diisi Distribution){noteBtn('caption')}</label>
                   <textarea
                     ref={growRef}
                     value={form.caption}
@@ -384,35 +447,17 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                     onChange={(e) => setForm({ ...form, caption: e.target.value })}
                     placeholder="Caption final untuk upload"
                   />
+                  {notePanel('caption')}
                 </div>
                 {editing && (
                   <div className="notes-box">
-                    <div className="modal-col-label">Catatan ({notes.length})</div>
-                    {notes.length === 0 && <div className="notes-empty">Belum ada catatan. Semua tim bisa menulis di sini.</div>}
-                    {notes.map((n) => (
-                      <div className="note-item" key={n.id}>
-                        <span className="row-avatar note-avatar">{initials(n.author_name)}</span>
-                        <div className="note-body">
-                          <div className="note-meta">
-                            <b>{n.author_name || 'anonim'}</b>
-                            <span>{new Date(n.created_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
-                          </div>
-                          <div className="note-text">{n.note}</div>
-                        </div>
-                        {(profile?.id === n.author_id || canDelete) && (
-                          <button className="note-del" title="Hapus catatan" onClick={() => deleteNote(n)}>✕</button>
-                        )}
-                      </div>
-                    ))}
-                    <div className="note-input">
-                      <input
-                        value={newNote}
-                        placeholder="Tulis catatan… (semua tim bisa)"
-                        onChange={(e) => setNewNote(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && addNote()}
-                      />
-                      <button className="btn" onClick={addNote} disabled={noteBusy || !newNote.trim()}>Kirim</button>
+                    <div className="modal-col-label">
+                      Catatan umum{noteBtn('umum')}
                     </div>
+                    {notePanel('umum')}
+                    {openNoteField !== 'umum' && fieldNotes('umum').length > 0 && (
+                      <div className="notes-empty">{fieldNotes('umum').length} catatan umum — klik ikon untuk membuka.</div>
+                    )}
                   </div>
                 )}
               </div>
@@ -420,43 +465,49 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                 <div className="modal-col-label">Detail &amp; aset</div>
                 <div className="field-row">
                   <div className="field">
-                    <label>Akun</label>
+                    <label>Akun{noteBtn('account')}</label>
                     <select value={form.account_id} disabled={readOnly} onChange={(e) => setForm({ ...form, account_id: e.target.value })}>
                       <option value="">— pilih —</option>
                       {accounts.map((a) => <option key={a.id} value={a.id}>{a.handle}</option>)}
                     </select>
+                    {notePanel('account')}
                   </div>
                   <div className="field">
-                    <label>Pilar</label>
+                    <label>Pilar{noteBtn('pillar')}</label>
                     <select value={form.pillar} disabled={readOnly} onChange={(e) => setForm({ ...form, pillar: e.target.value as Pillar })}>
                       {(Object.keys(PILLAR_LABEL) as Pillar[]).map((p) => <option key={p} value={p}>{PILLAR_LABEL[p]}</option>)}
                     </select>
+                    {notePanel('pillar')}
                   </div>
                 </div>
                 <div className="field">
-                  <label>Status</label>
+                  <label>Status{noteBtn('status')}</label>
                   <select value={form.status} disabled={readOnly} onChange={(e) => setForm({ ...form, status: e.target.value as ContentStatus })}>
                     {STATUSES.filter((s) => statusOptions.includes(s.key)).map((s) => (
                       <option key={s.key} value={s.key}>{s.label} · {s.ownerTeam}</option>
                     ))}
                   </select>
+                  {notePanel('status')}
                 </div>
                 <div className="field-row">
                   <div className="field">
-                    <label>Deadline</label>
+                    <label>Deadline{noteBtn('deadline')}</label>
                     <input type="date" value={form.deadline} disabled={readOnly} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
+                    {notePanel('deadline')}
                   </div>
                   <div className="field">
-                    <label>Tanggal tayang</label>
+                    <label>Tanggal tayang{noteBtn('publish_date')}</label>
                     <input type="date" value={form.publish_date} disabled={readOnly} onChange={(e) => setForm({ ...form, publish_date: e.target.value })} />
+                    {notePanel('publish_date')}
                   </div>
                 </div>
                 <div className="field">
-                  <label>PIC Creative</label>
+                  <label>PIC Creative{noteBtn('pic')}</label>
                   <select value={form.pic_creative} disabled={readOnly} onChange={(e) => setForm({ ...form, pic_creative: e.target.value })}>
                     <option value="">—</option>
                     {membersOf('creative').map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                   </select>
+                  {notePanel('pic')}
                 </div>
                 <div className="field-row">
                   <div className="field">
@@ -476,7 +527,7 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                 </div>
                 <div className="field">
                   <label>
-                    Link Drive (aset jadi)
+                    Link Drive (aset jadi){noteBtn('asset_url')}
                     {isUrl(form.asset_url) && (
                       <a className="open-link" href={form.asset_url.trim()} target="_blank" rel="noopener noreferrer">Buka ↗</a>
                     )}
@@ -488,6 +539,7 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                     placeholder="mis. [05] FILM_2607.mov / link Drive"
                   />
                   <div className="hint">Tempel link/nama file final dari Drive. Distribution memakainya untuk upload.</div>
+                  {notePanel('asset_url')}
                 </div>
                 <label className="check-row">
                   <input type="checkbox" checked={form.potensi_fyp} disabled={readOnly} onChange={(e) => setForm({ ...form, potensi_fyp: e.target.checked })} />
