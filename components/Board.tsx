@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import {
   DIVISIONS, PILLAR_LABEL, STATUSES,
-  canEditRow, initials, statusDef, targetableStatuses,
+  canEditRow, initials, statusDef,
   type Account, type ContentRow, type ContentStatus, type Division, type Pillar, type Profile, type TeamMember, type ContentNote,
 } from '@/lib/types';
 
@@ -226,7 +226,6 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
       title: form.title.trim(),
       account_id: form.account_id || null,
       pillar: form.pillar,
-      status: form.status,
       pic_creative: form.pic_creative || null,
       pic_distribution: form.pic_distribution || null,
       pic_ads: form.pic_ads || null,
@@ -243,7 +242,7 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
       const res = await supabase.from('contents').update(payload).eq('id', editing.id);
       err = res.error;
     } else {
-      const res = await supabase.from('contents').insert({ ...payload, created_by: profile?.id || null });
+      const res = await supabase.from('contents').insert({ ...payload, status: 'drafting' as ContentStatus, created_by: profile?.id || null });
       err = res.error;
     }
     setSaving(false);
@@ -263,6 +262,43 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
     load();
   };
 
+  const ORDER: ContentStatus[] = ['drafting', 'review', 'siap_upload', 'terjadwal', 'published', 'diiklankan'];
+  const [flowBusy, setFlowBusy] = useState(false);
+
+  const nextActionFor = (s: ContentStatus): { target: ContentStatus; label: string; allowed: boolean } | null => {
+    const priv = canAcc;
+    const team = profile?.team;
+    switch (s) {
+      case 'drafting':
+        return { target: 'review', label: 'Selesai → Kirim ke Review', allowed: priv || team === 'creative' || team === 'delta' };
+      case 'review':
+        return { target: 'siap_upload', label: '✓ ACC → Siap Upload (lead)', allowed: priv };
+      case 'siap_upload':
+        return { target: 'terjadwal', label: 'Jadwalkan → Terjadwal', allowed: priv || team === 'distribution' || team === 'delta' };
+      case 'terjadwal':
+        return { target: 'published', label: 'Tandai Sudah Tayang', allowed: priv || team === 'distribution' || team === 'delta' };
+      case 'published':
+        return { target: 'diiklankan', label: 'Tandai Diiklankan', allowed: priv || team === 'ads' || team === 'delta' };
+      default:
+        return null;
+    }
+  };
+
+  const moveTo = async (target: ContentStatus) => {
+    if (!editing) return;
+    if (target === 'terjadwal' && !form.publish_date) {
+      setError('Isi Tanggal tayang dulu sebelum menjadwalkan.');
+      return;
+    }
+    setFlowBusy(true);
+    setError('');
+    const { error: err } = await supabase.from('contents').update({ status: target }).eq('id', editing.id);
+    setFlowBusy(false);
+    if (err) { setError('Gagal memindahkan — cek wewenang tim.'); return; }
+    setModalOpen(false);
+    load();
+  };
+
   const remove = async () => {
     if (!editing) return;
     if (!window.confirm(`Hapus konten "${editing.title}"?`)) return;
@@ -274,8 +310,10 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
     load();
   };
 
-  const statusOptions = targetableStatuses(profile, editing ? editing.status : 'drafting');
   const canDelete = profile?.role === 'superadmin' || profile?.role === 'manager';
+  const nextStep = editing ? nextActionFor(editing.status) : null;
+  const prevIdx = editing ? ORDER.indexOf(editing.status) : -1;
+  const prevStep = editing && prevIdx > 0 ? ORDER[prevIdx - 1] : null;
   const editingDef = statusDef(form.status);
 
   const NOTE_FIELD_LABELS: Record<string, string> = {
@@ -576,11 +614,26 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                 </div>
                 <div className="field">
                   <label>Status{noteBtn('status')}</label>
-                  <select value={form.status} disabled={readOnly} onChange={(e) => setForm({ ...form, status: e.target.value as ContentStatus })}>
-                    {STATUSES.filter((s) => statusOptions.includes(s.key)).map((s) => (
-                      <option key={s.key} value={s.key}>{s.label} · {s.ownerTeam}</option>
-                    ))}
-                  </select>
+                  <div className="status-chip" style={{ ['--sc' as never]: editingDef.color }}>
+                    <span className="sq" style={{ background: editingDef.color }} />
+                    {editingDef.label} · {editingDef.ownerTeam}
+                  </div>
+                  {editing && nextStep && nextStep.allowed && (
+                    <button className="btn primary flow-btn" disabled={flowBusy || saving} onClick={() => moveTo(nextStep.target)}>
+                      {flowBusy ? 'Memproses…' : nextStep.label}
+                    </button>
+                  )}
+                  {editing && nextStep && !nextStep.allowed && (
+                    <div className="hint" style={{ marginTop: 6 }}>
+                      Perpindahan tahap ini menunggu {editing.status === 'review' ? 'ACC lead' : 'tim ' + statusDef(nextStep.target).ownerTeam}.
+                    </div>
+                  )}
+                  {editing && canDelete && prevStep && (
+                    <button className="btn ghost flow-back" disabled={flowBusy} onClick={() => moveTo(prevStep)}>
+                      ↩ Kembalikan ke {statusDef(prevStep).label}
+                    </button>
+                  )}
+                  {!editing && <div className="hint">Konten baru otomatis masuk Drafting — perpindahan tahap lewat tombol, diatur sistem.</div>}
                 </div>
                 <div className="field-row">
                   <div className="field">
