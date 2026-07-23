@@ -20,7 +20,7 @@ const EMPTY_FORM = {
   title: '',
   account_id: '',
   pillar: 'lagi_ramai' as Pillar,
-  status: 'ide' as ContentStatus,
+  status: 'drafting' as ContentStatus,
   pic_creative: '',
   pic_distribution: '',
   pic_ads: '',
@@ -252,6 +252,17 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
     load();
   };
 
+  const [accBusy, setAccBusy] = useState<string | null>(null);
+  const canAcc = profile?.role === 'superadmin' || profile?.role === 'manager';
+
+  const accRow = async (row: ContentRow) => {
+    setAccBusy(row.id);
+    const { error: err } = await supabase.from('contents').update({ status: 'siap_upload' }).eq('id', row.id);
+    setAccBusy(null);
+    if (err) window.alert('Gagal ACC — cek hak akses.');
+    load();
+  };
+
   const remove = async () => {
     if (!editing) return;
     if (!window.confirm(`Hapus konten "${editing.title}"?`)) return;
@@ -263,7 +274,7 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
     load();
   };
 
-  const statusOptions = targetableStatuses(profile, editing ? editing.status : 'ide');
+  const statusOptions = targetableStatuses(profile, editing ? editing.status : 'drafting');
   const canDelete = profile?.role === 'superadmin' || profile?.role === 'manager';
   const editingDef = statusDef(form.status);
 
@@ -399,11 +410,14 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                   const pic = picForCard(row);
                   const hasAsset = !!row.asset_url;
                   return (
-                    <button
+                    <div
                       key={row.id}
+                      role="button"
+                      tabIndex={0}
                       className={`card ${editable ? '' : 'locked'}`}
                       style={{ ['--card-accent' as never]: statusDef(row.status).color }}
                       onClick={() => openEdit(row)}
+                      onKeyDown={(e) => e.key === 'Enter' && openEdit(row)}
                       title={editable ? 'Klik untuk edit' : 'Lihat detail (tahap ini dikelola tim lain)'}
                     >
                       <div className="card-title" dangerouslySetInnerHTML={{ __html: mdToHtml(row.title) }} />
@@ -411,13 +425,25 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                         <span className="sq" />
                         {accName(row.account_id)}
                       </div>
+                      {row.status === 'review' && canAcc && (
+                        <button
+                          className="acc-btn"
+                          disabled={accBusy === row.id}
+                          onClick={(e) => { e.stopPropagation(); accRow(row); }}
+                        >
+                          {accBusy === row.id ? 'Memproses…' : '✓ ACC → Siap Upload'}
+                        </button>
+                      )}
+                      {row.status === 'review' && !canAcc && (
+                        <div className="acc-wait">Menunggu ACC lead</div>
+                      )}
                       <div className="card-foot">
                         <span className="flag-dot" style={{ background: hasAsset ? 'var(--green)' : 'var(--amber)' }} />
                         {hasAsset ? 'Aset siap' : 'Perlu link drive'}
                         {row.potensi_fyp && <span style={{ color: 'var(--st-review)' }}>· FYP</span>}
                         <span className="pic-avatar" title={pic || 'PIC belum di-assign'}>{initials(pic)}</span>
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
                 {byStatus[s.key].length === 0 && <div className="col-empty">Tak ada konten pada rentang ini</div>}
