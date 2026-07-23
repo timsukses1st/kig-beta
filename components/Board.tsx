@@ -242,6 +242,21 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
   const canDelete = profile?.role === 'superadmin' || profile?.role === 'manager';
   const editingDef = statusDef(form.status);
 
+  const NOTE_FIELD_LABELS: Record<string, string> = {
+    title: 'Hook / Brief',
+    visual_hook: 'Visual Hook',
+    production_note: 'Catatan produksi',
+    caption: 'Caption',
+    account: 'Akun',
+    pillar: 'Pilar',
+    status: 'Status',
+    deadline: 'Deadline',
+    publish_date: 'Tanggal tayang',
+    pic: 'PIC',
+    asset_url: 'Link Drive',
+    umum: 'Catatan umum',
+  };
+
   const fieldNotes = (field: string) => notes.filter((n) => n.field === field);
 
   const noteBtn = (field: string) => {
@@ -263,27 +278,37 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
     );
   };
 
-  const notePanel = (field: string) => {
-    if (!editing || openNoteField !== field) return null;
+  const noteSidePanel = () => {
+    if (!editing || !openNoteField) return null;
+    const field = openNoteField;
     const list = fieldNotes(field);
     return (
-      <div className="field-notes">
-        {list.length === 0 && <div className="notes-empty">Belum ada catatan di field ini.</div>}
-        {list.map((n) => (
-          <div className="note-item" key={n.id}>
-            <span className="row-avatar note-avatar">{initials(n.author_name)}</span>
-            <div className="note-body">
-              <div className="note-meta">
-                <b>{n.author_name || 'anonim'}</b>
-                <span>{new Date(n.created_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
-              </div>
-              <div className="note-text">{n.note}</div>
-            </div>
-            {(profile?.id === n.author_id || canDelete) && (
-              <button className="note-del" title="Hapus catatan" onClick={() => deleteNote(n)}>✕</button>
-            )}
+      <div className="note-side">
+        <div className="note-side-head">
+          <div>
+            <div className="modal-col-label" style={{ marginBottom: 2 }}>Catatan</div>
+            <b>{NOTE_FIELD_LABELS[field] || field}</b>
           </div>
-        ))}
+          <button className="btn ghost" onClick={() => setOpenNoteField(null)}>✕</button>
+        </div>
+        <div className="note-side-body">
+          {list.length === 0 && <div className="notes-empty">Belum ada catatan di field ini.</div>}
+          {list.map((n) => (
+            <div className="note-item" key={n.id}>
+              <span className="row-avatar note-avatar">{initials(n.author_name)}</span>
+              <div className="note-body">
+                <div className="note-meta">
+                  <b>{n.author_name || 'anonim'}</b>
+                  <span>{new Date(n.created_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                <div className="note-text">{n.note}</div>
+              </div>
+              {(profile?.id === n.author_id || canDelete) && (
+                <button className="note-del" title="Hapus catatan" onClick={() => deleteNote(n)}>✕</button>
+              )}
+            </div>
+          ))}
+        </div>
         <div className="note-input">
           <input
             autoFocus
@@ -378,7 +403,14 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
       )}
 
       {modalOpen && (
-        <div className="overlay" onClick={(e) => e.target === e.currentTarget && setModalOpen(false)}>
+        <div
+          className="overlay"
+          onClick={(e) => {
+            const t = e.target as HTMLElement;
+            if (t === e.currentTarget || t.classList.contains('modal-wrap')) setModalOpen(false);
+          }}
+        >
+          <div className="modal-wrap">
           <div className="modal">
             <div className="modal-head">
               <div>
@@ -408,7 +440,6 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                     onChange={(e) => setForm({ ...form, title: e.target.value })}
                     placeholder="Tulis hook & brief konten… mis. 5 film Indonesia hidden gem bulan ini"
                   />
-                  {notePanel('title')}
                 </div>
                 <div className="field">
                   <label>
@@ -423,7 +454,6 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                     onChange={(e) => setForm({ ...form, visual_hook: e.target.value })}
                     placeholder="Link / nama file referensi"
                   />
-                  {notePanel('visual_hook')}
                 </div>
                 <div className="field">
                   <label>Catatan produksi{noteBtn('production_note')}</label>
@@ -435,7 +465,6 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                     onChange={(e) => setForm({ ...form, production_note: e.target.value })}
                     placeholder="mis. Ambil 3 detik pertama · gaya cepat"
                   />
-                  {notePanel('production_note')}
                 </div>
                 <div className="field">
                   <label>Caption (diisi Distribution){noteBtn('caption')}</label>
@@ -447,17 +476,10 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                     onChange={(e) => setForm({ ...form, caption: e.target.value })}
                     placeholder="Caption final untuk upload"
                   />
-                  {notePanel('caption')}
                 </div>
                 {editing && (
                   <div className="notes-box">
-                    <div className="modal-col-label">
-                      Catatan umum{noteBtn('umum')}
-                    </div>
-                    {notePanel('umum')}
-                    {openNoteField !== 'umum' && fieldNotes('umum').length > 0 && (
-                      <div className="notes-empty">{fieldNotes('umum').length} catatan umum — klik ikon untuk membuka.</div>
-                    )}
+                    <div className="modal-col-label">Catatan umum{noteBtn('umum')}</div>
                   </div>
                 )}
               </div>
@@ -470,14 +492,12 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                       <option value="">— pilih —</option>
                       {accounts.map((a) => <option key={a.id} value={a.id}>{a.handle}</option>)}
                     </select>
-                    {notePanel('account')}
                   </div>
                   <div className="field">
                     <label>Pilar{noteBtn('pillar')}</label>
                     <select value={form.pillar} disabled={readOnly} onChange={(e) => setForm({ ...form, pillar: e.target.value as Pillar })}>
                       {(Object.keys(PILLAR_LABEL) as Pillar[]).map((p) => <option key={p} value={p}>{PILLAR_LABEL[p]}</option>)}
                     </select>
-                    {notePanel('pillar')}
                   </div>
                 </div>
                 <div className="field">
@@ -487,18 +507,15 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                       <option key={s.key} value={s.key}>{s.label} · {s.ownerTeam}</option>
                     ))}
                   </select>
-                  {notePanel('status')}
                 </div>
                 <div className="field-row">
                   <div className="field">
                     <label>Deadline{noteBtn('deadline')}</label>
                     <input type="date" value={form.deadline} disabled={readOnly} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
-                    {notePanel('deadline')}
                   </div>
                   <div className="field">
                     <label>Tanggal tayang{noteBtn('publish_date')}</label>
                     <input type="date" value={form.publish_date} disabled={readOnly} onChange={(e) => setForm({ ...form, publish_date: e.target.value })} />
-                    {notePanel('publish_date')}
                   </div>
                 </div>
                 <div className="field">
@@ -507,7 +524,6 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                     <option value="">—</option>
                     {membersOf('creative').map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                   </select>
-                  {notePanel('pic')}
                 </div>
                 <div className="field-row">
                   <div className="field">
@@ -539,7 +555,6 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                     placeholder="mis. [05] FILM_2607.mov / link Drive"
                   />
                   <div className="hint">Tempel link/nama file final dari Drive. Distribution memakainya untuk upload.</div>
-                  {notePanel('asset_url')}
                 </div>
                 <label className="check-row">
                   <input type="checkbox" checked={form.potensi_fyp} disabled={readOnly} onChange={(e) => setForm({ ...form, potensi_fyp: e.target.checked })} />
@@ -562,6 +577,8 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                 )}
               </div>
             </div>
+          </div>
+          {noteSidePanel()}
           </div>
         </div>
       )}
