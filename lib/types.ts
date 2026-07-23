@@ -1,0 +1,142 @@
+export type Role = 'superadmin' | 'manager' | 'tim';
+export type Team = 'delta' | 'creative' | 'distribution' | 'ads';
+export type ContentStatus =
+  | 'ide' | 'drafting' | 'review'
+  | 'siap_upload' | 'terjadwal'
+  | 'published' | 'diiklankan';
+export type Pillar = 'lagi_ramai' | 'wajib_tonton' | 'di_balik_layar' | 'panas_timeline';
+export type Division = 'semua' | 'creative' | 'distribution' | 'ads';
+
+export interface Profile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: Role;
+  team: Team | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface Account {
+  id: string;
+  handle: string;
+  label: string | null;
+  is_active: boolean;
+}
+
+export interface ContentRow {
+  id: string;
+  title: string;
+  account_id: string | null;
+  pillar: Pillar;
+  status: ContentStatus;
+  pic_creative: string | null;
+  pic_distribution: string | null;
+  pic_ads: string | null;
+  deadline: string | null;
+  publish_date: string | null;
+  caption: string | null;
+  asset_url: string | null;
+  visual_hook: string | null;
+  production_note: string | null;
+  potensi_fyp: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ActivityLog {
+  id: number;
+  actor_email: string | null;
+  actor_name: string | null;
+  action: string;
+  entity: string;
+  entity_title: string | null;
+  detail: string | null;
+  created_at: string;
+}
+
+export const PILLAR_LABEL: Record<Pillar, string> = {
+  lagi_ramai: 'Lagi Ramai',
+  wajib_tonton: 'Wajib Tonton',
+  di_balik_layar: 'Di Balik Layar',
+  panas_timeline: 'Panas di Timeline',
+};
+
+export interface StatusDef {
+  key: ContentStatus;
+  label: string;
+  ownerTeam: Team;
+  color: string;
+}
+
+export const STATUSES: StatusDef[] = [
+  { key: 'ide', label: 'Ide', ownerTeam: 'creative', color: 'var(--st-ide)' },
+  { key: 'drafting', label: 'Drafting', ownerTeam: 'creative', color: 'var(--st-drafting)' },
+  { key: 'review', label: 'Review', ownerTeam: 'creative', color: 'var(--st-review)' },
+  { key: 'siap_upload', label: 'Siap Upload', ownerTeam: 'distribution', color: 'var(--st-siap)' },
+  { key: 'terjadwal', label: 'Terjadwal', ownerTeam: 'distribution', color: 'var(--st-terjadwal)' },
+  { key: 'published', label: 'Published', ownerTeam: 'ads', color: 'var(--st-published)' },
+  { key: 'diiklankan', label: 'Diiklankan', ownerTeam: 'ads', color: 'var(--st-diiklankan)' },
+];
+
+export const DIVISIONS: { key: Division; label: string; color: string; desc: string; statuses: ContentStatus[] }[] = [
+  {
+    key: 'semua', label: 'Semua', color: 'var(--accent)',
+    desc: 'Semua konten lintas divisi — cari & edit tanpa pindah papan.',
+    statuses: ['ide', 'drafting', 'review', 'siap_upload', 'terjadwal', 'published', 'diiklankan'],
+  },
+  {
+    key: 'creative', label: 'Creative', color: 'var(--st-ide)',
+    desc: 'Ide → Drafting → Review. Menyiapkan brief, copywriting, dan aset final.',
+    statuses: ['ide', 'drafting', 'review'],
+  },
+  {
+    key: 'distribution', label: 'Distribution', color: 'var(--st-terjadwal)',
+    desc: 'Siap Upload → Terjadwal → Published. Menyusun caption, media, dan menayangkan.',
+    statuses: ['siap_upload', 'terjadwal'],
+  },
+  {
+    key: 'ads', label: 'Ads', color: 'var(--st-diiklankan)',
+    desc: 'Published → Diiklankan. Mengelola boosting dan kode ads.',
+    statuses: ['published', 'diiklankan'],
+  },
+];
+
+export const TEAM_EDITABLE: Record<Team, ContentStatus[]> = {
+  delta: ['ide', 'drafting', 'review', 'siap_upload', 'terjadwal', 'published', 'diiklankan'],
+  creative: ['ide', 'drafting', 'review'],
+  distribution: ['siap_upload', 'terjadwal'],
+  ads: ['published', 'diiklankan'],
+};
+
+export const TEAM_TARGETABLE: Record<Team, ContentStatus[]> = {
+  delta: ['ide', 'drafting', 'review', 'siap_upload', 'terjadwal', 'published', 'diiklankan'],
+  creative: ['ide', 'drafting', 'review', 'siap_upload'],
+  distribution: ['siap_upload', 'terjadwal', 'published'],
+  ads: ['published', 'diiklankan'],
+};
+
+export function canEditRow(profile: Profile | null, status: ContentStatus): boolean {
+  if (!profile || !profile.is_active) return false;
+  if (profile.role === 'superadmin' || profile.role === 'manager') return true;
+  if (!profile.team) return false;
+  return TEAM_EDITABLE[profile.team].includes(status);
+}
+
+export function targetableStatuses(profile: Profile | null, current: ContentStatus): ContentStatus[] {
+  if (!profile) return [current];
+  if (profile.role === 'superadmin' || profile.role === 'manager') return STATUSES.map((s) => s.key);
+  if (!profile.team) return [current];
+  const targets = TEAM_TARGETABLE[profile.team];
+  return targets.includes(current) ? targets : [current];
+}
+
+export function statusDef(key: ContentStatus): StatusDef {
+  return STATUSES.find((s) => s.key === key) || STATUSES[0];
+}
+
+export function initials(name: string | null | undefined): string {
+  if (!name) return '?';
+  return name.trim().charAt(0).toUpperCase() || '?';
+}
