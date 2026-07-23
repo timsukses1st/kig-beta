@@ -53,6 +53,15 @@ export interface ContentRow {
   updated_at: string;
 }
 
+export interface ContentNote {
+  id: string;
+  content_id: string;
+  author_id: string | null;
+  author_name: string | null;
+  note: string;
+  created_at: string;
+}
+
 export interface ActivityLog {
   id: number;
   actor_email: string | null;
