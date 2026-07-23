@@ -492,13 +492,7 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
       )}
 
       {modalOpen && (
-        <div
-          className="overlay"
-          onClick={(e) => {
-            const t = e.target as HTMLElement;
-            if (t === e.currentTarget || t.classList.contains('modal-wrap')) setModalOpen(false);
-          }}
-        >
+        <div className="overlay">
           <div className="modal-wrap">
           <div className="modal">
             <div className="modal-head">
