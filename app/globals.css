@@ -377,3 +377,8 @@ td select {
   border: 1px solid var(--border); border-radius: 9px;
 }
 .footer-icon:hover { border-color: var(--border-strong); }
+
+/* ================= Nav SVG icons ================= */
+.nav-item .nav-svg { flex-shrink: 0; opacity: .85; }
+.nav-item.active .nav-svg { color: var(--accent); opacity: 1; }
+.theme-btn { display: flex; align-items: center; justify-content: center; }
