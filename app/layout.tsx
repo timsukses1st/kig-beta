@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Beta — Content Launch System',
+  title: 'Alpha — Content Launch System',
   description: 'Sistem internal Delta untuk merancang, memproduksi, dan meluncurkan konten media film KIG.',
 };
 

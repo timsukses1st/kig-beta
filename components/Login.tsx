@@ -21,8 +21,8 @@ export default function Login() {
     <div className="login-wrap">
       <div className="login-card">
         <div className="login-brand">
-          <div className="brand-logo">β</div>
-          <h1 style={{ fontSize: 20, fontWeight: 700 }}>Beta</h1>
+          <div className="brand-logo">α</div>
+          <h1 style={{ fontSize: 20, fontWeight: 700 }}>Alpha</h1>
         </div>
         <p className="sub">CONTENT LAUNCH SYSTEM · INTERNAL KIG</p>
         <div className="field">

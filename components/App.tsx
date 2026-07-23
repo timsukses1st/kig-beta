@@ -140,18 +140,18 @@ export default function App() {
   const [booting, setBooting] = useState(true);
 
   useEffect(() => {
-    const savedTheme = window.localStorage?.getItem('beta-theme');
+    const savedTheme = window.localStorage?.getItem('alpha-theme');
     if (savedTheme === 'light' || savedTheme === 'dark') setTheme(savedTheme);
-    if (window.localStorage?.getItem('beta-sidebar') === 'collapsed') setCollapsed(true);
+    if (window.localStorage?.getItem('alpha-sidebar') === 'collapsed') setCollapsed(true);
   }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    try { window.localStorage?.setItem('beta-theme', theme); } catch {}
+    try { window.localStorage?.setItem('alpha-theme', theme); } catch {}
   }, [theme]);
 
   useEffect(() => {
-    try { window.localStorage?.setItem('beta-sidebar', collapsed ? 'collapsed' : 'open'); } catch {}
+    try { window.localStorage?.setItem('alpha-sidebar', collapsed ? 'collapsed' : 'open'); } catch {}
   }, [collapsed]);
 
   const loadProfile = useCallback(async (userId: string) => {
@@ -202,10 +202,10 @@ export default function App() {
     <div className="app-shell">
       <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
         <div className="brand">
-          <div className="brand-logo">β</div>
+          <div className="brand-logo">α</div>
           {!collapsed && (
             <div>
-              <h1>Beta</h1>
+              <h1>Alpha</h1>
               <div className="brand-sub">CONTENT LAUNCH</div>
             </div>
           )}
@@ -312,7 +312,7 @@ export default function App() {
           />
         )}
         {view === 'log' && canSeeLog && <LogView />}
-        {view === 'access' && isSuper && <AccessView selfId={session.user.id} />}
+        {view === 'access' && isSuper && <AccessView selfId={session.user.id} onAccountsChanged={loadAccounts} />}
       </main>
     </div>
   );
