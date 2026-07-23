@@ -11,14 +11,90 @@ import AccessView from '@/components/AccessView';
 
 type View = 'board' | 'kalender' | 'tracker' | 'ads' | 'log' | 'access';
 
-const NAV: { key: View; label: string; icon: string }[] = [
-  { key: 'board', label: 'Board Pipeline', icon: '▦' },
-  { key: 'kalender', label: 'Kalender Tayang', icon: '▤' },
-  { key: 'tracker', label: 'Tracker', icon: '≣' },
-  { key: 'ads', label: 'Ads Tracker', icon: '◎' },
-  { key: 'log', label: 'Log Aktivitas', icon: '≡' },
-  { key: 'access', label: 'Kelola Akses', icon: '⚙' },
+const NAV: { key: View; label: string }[] = [
+  { key: 'board', label: 'Board Pipeline' },
+  { key: 'kalender', label: 'Kalender Tayang' },
+  { key: 'tracker', label: 'Tracker' },
+  { key: 'ads', label: 'Ads Tracker' },
+  { key: 'log', label: 'Log Aktivitas' },
+  { key: 'access', label: 'Kelola Akses' },
 ];
+
+const ICON_PATHS: Record<View, React.ReactNode> = {
+  board: (
+    <>
+      <rect x="4" y="4" width="4.5" height="16" rx="1" />
+      <rect x="10" y="4" width="4.5" height="11" rx="1" />
+      <rect x="16" y="4" width="4.5" height="7" rx="1" />
+    </>
+  ),
+  kalender: (
+    <>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+      <line x1="8" y1="3" x2="8" y2="7" />
+      <line x1="16" y1="3" x2="16" y2="7" />
+    </>
+  ),
+  tracker: (
+    <>
+      <line x1="9" y1="4" x2="7" y2="20" />
+      <line x1="17" y1="4" x2="15" y2="20" />
+      <line x1="4" y1="9" x2="20" y2="9" />
+      <line x1="4" y1="15" x2="20" y2="15" />
+    </>
+  ),
+  ads: (
+    <>
+      <path d="M3 11v3l14 4V7L3 11z" />
+      <path d="M20 9.5a3 3 0 0 1 0 6" />
+      <path d="M7 14.6V19a1 1 0 0 0 1 1h2" />
+    </>
+  ),
+  log: (
+    <>
+      <line x1="9" y1="6" x2="20" y2="6" />
+      <line x1="9" y1="12" x2="20" y2="12" />
+      <line x1="9" y1="18" x2="20" y2="18" />
+      <circle cx="5" cy="6" r="1" />
+      <circle cx="5" cy="12" r="1" />
+      <circle cx="5" cy="18" r="1" />
+    </>
+  ),
+  access: (
+    <>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" />
+      <circle cx="17.5" cy="9" r="2.5" />
+      <path d="M16.5 14.2c2.7.4 4.5 2.6 4.5 5.3" />
+    </>
+  ),
+};
+
+const NavIcon = ({ view }: { view: View }) => (
+  <svg className="nav-svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {ICON_PATHS[view]}
+  </svg>
+);
+
+const SunIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="4.5" />
+    <line x1="12" y1="2.5" x2="12" y2="5" /><line x1="12" y1="19" x2="12" y2="21.5" />
+    <line x1="2.5" y1="12" x2="5" y2="12" /><line x1="19" y1="12" x2="21.5" y2="12" />
+    <line x1="5.3" y1="5.3" x2="7" y2="7" /><line x1="17" y1="17" x2="18.7" y2="18.7" />
+    <line x1="5.3" y1="18.7" x2="7" y2="17" /><line x1="17" y1="7" x2="18.7" y2="5.3" />
+  </svg>
+);
+
+const MoonIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+  </svg>
+);
 
 const LogoutIcon = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -183,17 +259,19 @@ export default function App() {
             title={collapsed ? n.label : undefined}
             onClick={() => setView(n.key)}
           >
-            {collapsed ? <span className="nav-icon">{n.icon}</span> : <><span className="dot" />{n.label}</>}
+            <NavIcon view={n.key} />
+            {!collapsed && n.label}
           </button>
         ))}
 
         <div className="sidebar-footer">
           <button
-            className={collapsed ? 'icon-btn footer-icon' : 'btn ghost'}
+            className={collapsed ? 'icon-btn footer-icon' : 'btn ghost theme-btn'}
             title={theme === 'dark' ? 'Mode terang' : 'Mode gelap'}
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           >
-            {theme === 'dark' ? '☀' : '☾'}{!collapsed && (theme === 'dark' ? ' Mode terang' : ' Mode gelap')}
+            {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+            {!collapsed && <span style={{ marginLeft: 8 }}>{theme === 'dark' ? 'Mode terang' : 'Mode gelap'}</span>}
           </button>
           {collapsed ? (
             <>
