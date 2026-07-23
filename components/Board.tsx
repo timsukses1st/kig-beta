@@ -513,6 +513,19 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                     ? 'Mode lihat — tahap ini dikelola tim lain.'
                     : 'Creative mengisi brief & aset. Caption, jadwal, dan ads menyusul di Distribution & Ads.'}
                 </div>
+                {editing && (
+                  <button
+                    className={`umum-note ${fieldNotes('umum').length ? 'has' : ''} ${openNoteField === 'umum' ? 'open' : ''}`}
+                    onClick={() => { setOpenNoteField(openNoteField === 'umum' ? null : 'umum'); setNewNote(''); }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                    Catatan umum
+                    {fieldNotes('umum').length > 0 && <span className="umum-count">{fieldNotes('umum').length}</span>}
+                  </button>
+                )}
               </div>
               <button className="btn ghost modal-close" onClick={() => setModalOpen(false)}>✕</button>
             </div>
@@ -589,11 +602,6 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
                     placeholder="Caption final untuk upload"
                   />
                 </div>
-                {editing && (
-                  <div className="notes-box">
-                    <div className="modal-col-label">Catatan umum{noteBtn('umum')}</div>
-                  </div>
-                )}
               </div>
               <div>
                 <div className="modal-col-label">Detail &amp; aset</div>
