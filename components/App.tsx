@@ -11,14 +11,34 @@ import AccessView from '@/components/AccessView';
 
 type View = 'board' | 'kalender' | 'tracker' | 'ads' | 'log' | 'access';
 
-const NAV: { key: View; label: string }[] = [
-  { key: 'board', label: 'Board Pipeline' },
-  { key: 'kalender', label: 'Kalender Tayang' },
-  { key: 'tracker', label: 'Tracker' },
-  { key: 'ads', label: 'Ads Tracker' },
-  { key: 'log', label: 'Log Aktivitas' },
-  { key: 'access', label: 'Kelola Akses' },
+const NAV: { key: View; label: string; icon: string }[] = [
+  { key: 'board', label: 'Board Pipeline', icon: '▦' },
+  { key: 'kalender', label: 'Kalender Tayang', icon: '▤' },
+  { key: 'tracker', label: 'Tracker', icon: '≣' },
+  { key: 'ads', label: 'Ads Tracker', icon: '◎' },
+  { key: 'log', label: 'Log Aktivitas', icon: '≡' },
+  { key: 'access', label: 'Kelola Akses', icon: '⚙' },
 ];
+
+const LogoutIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <polyline points="16 17 21 12 16 7" />
+    <line x1="21" y1="12" x2="9" y2="12" />
+  </svg>
+);
+
+const CollapseIcon = ({ collapsed }: { collapsed: boolean }) => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <line x1="9" y1="4" x2="9" y2="20" />
+    {collapsed
+      ? <polyline points="13 9 16 12 13 15" />
+      : <polyline points="16 9 13 12 16 15" />}
+  </svg>
+);
 
 function Placeholder({ title, desc }: { title: string; desc: string }) {
   return (
@@ -40,17 +60,23 @@ export default function App() {
   const [accMenuOpen, setAccMenuOpen] = useState(false);
   const [view, setView] = useState<View>('board');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [collapsed, setCollapsed] = useState(false);
   const [booting, setBooting] = useState(true);
 
   useEffect(() => {
-    const saved = window.localStorage?.getItem('beta-theme');
-    if (saved === 'light' || saved === 'dark') setTheme(saved);
+    const savedTheme = window.localStorage?.getItem('beta-theme');
+    if (savedTheme === 'light' || savedTheme === 'dark') setTheme(savedTheme);
+    if (window.localStorage?.getItem('beta-sidebar') === 'collapsed') setCollapsed(true);
   }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     try { window.localStorage?.setItem('beta-theme', theme); } catch {}
   }, [theme]);
+
+  useEffect(() => {
+    try { window.localStorage?.setItem('beta-sidebar', collapsed ? 'collapsed' : 'open'); } catch {}
+  }, [collapsed]);
 
   const loadProfile = useCallback(async (userId: string) => {
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
@@ -94,67 +120,96 @@ export default function App() {
 
   const activeAcc = accounts.find((a) => a.id === activeAccount) || null;
   const displayName = profile?.full_name || session.user.email?.split('@')[0] || 'User';
+  const logout = () => supabase.auth.signOut();
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
         <div className="brand">
           <div className="brand-logo">β</div>
-          <div>
-            <h1>Beta</h1>
-            <div className="brand-sub">CONTENT LAUNCH</div>
-          </div>
+          {!collapsed && (
+            <div>
+              <h1>Beta</h1>
+              <div className="brand-sub">CONTENT LAUNCH</div>
+            </div>
+          )}
+          <button
+            className="icon-btn collapse-btn"
+            title={collapsed ? 'Buka sidebar' : 'Tutup sidebar'}
+            onClick={() => { setCollapsed(!collapsed); setAccMenuOpen(false); }}
+          >
+            <CollapseIcon collapsed={collapsed} />
+          </button>
         </div>
 
-        <div className="section-label">Akun</div>
-        <button className="account-picker" onClick={() => setAccMenuOpen(!accMenuOpen)}>
-          <div className="acc-avatar">{activeAcc ? initials(activeAcc.handle.replace('@', '')) : '∗'}</div>
-          <div>
-            <div className="acc-name">{activeAcc ? activeAcc.handle : 'Semua akun'}</div>
-            <div className="acc-sub">{activeAcc ? activeAcc.label || 'akun media' : `${accounts.length} akun aktif`}</div>
-          </div>
-          <span className="acc-caret">{accMenuOpen ? '▴' : '▾'}</span>
-        </button>
-        {accMenuOpen && (
-          <div className="account-menu">
-            <button className="account-option" onClick={() => { setActiveAccount('all'); setAccMenuOpen(false); }}>
-              <div className="acc-avatar" style={{ background: 'var(--raised)', color: 'var(--text)' }}>∗</div>
-              <div className="acc-name">Semua akun</div>
-              {activeAccount === 'all' && <span className="check">✓</span>}
+        {!collapsed && (
+          <>
+            <div className="section-label">Akun</div>
+            <button className="account-picker" onClick={() => setAccMenuOpen(!accMenuOpen)}>
+              <div className="acc-avatar">{activeAcc ? initials(activeAcc.handle.replace('@', '')) : '∗'}</div>
+              <div>
+                <div className="acc-name">{activeAcc ? activeAcc.handle : 'Semua akun'}</div>
+                <div className="acc-sub">{activeAcc ? activeAcc.label || 'akun media' : `${accounts.length} akun aktif`}</div>
+              </div>
+              <span className="acc-caret">{accMenuOpen ? '▴' : '▾'}</span>
             </button>
-            {accounts.map((a) => (
-              <button key={a.id} className="account-option" onClick={() => { setActiveAccount(a.id); setAccMenuOpen(false); }}>
-                <div className="acc-avatar">{initials(a.handle.replace('@', ''))}</div>
-                <div>
-                  <div className="acc-name">{a.handle}</div>
-                  {a.label && <div className="acc-sub">{a.label}</div>}
-                </div>
-                {activeAccount === a.id && <span className="check">✓</span>}
-              </button>
-            ))}
-          </div>
+            {accMenuOpen && (
+              <div className="account-menu">
+                <button className="account-option" onClick={() => { setActiveAccount('all'); setAccMenuOpen(false); }}>
+                  <div className="acc-avatar" style={{ background: 'var(--raised)', color: 'var(--text)' }}>∗</div>
+                  <div className="acc-name">Semua akun</div>
+                  {activeAccount === 'all' && <span className="check">✓</span>}
+                </button>
+                {accounts.map((a) => (
+                  <button key={a.id} className="account-option" onClick={() => { setActiveAccount(a.id); setAccMenuOpen(false); }}>
+                    <div className="acc-avatar">{initials(a.handle.replace('@', ''))}</div>
+                    <div>
+                      <div className="acc-name">{a.handle}</div>
+                      {a.label && <div className="acc-sub">{a.label}</div>}
+                    </div>
+                    {activeAccount === a.id && <span className="check">✓</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="section-label">Menu</div>
+          </>
         )}
 
-        <div className="section-label">Menu</div>
         {navItems.map((n) => (
-          <button key={n.key} className={`nav-item ${view === n.key ? 'active' : ''}`} onClick={() => setView(n.key)}>
-            <span className="dot" />
-            {n.label}
+          <button
+            key={n.key}
+            className={`nav-item ${view === n.key ? 'active' : ''}`}
+            title={collapsed ? n.label : undefined}
+            onClick={() => setView(n.key)}
+          >
+            {collapsed ? <span className="nav-icon">{n.icon}</span> : <><span className="dot" />{n.label}</>}
           </button>
         ))}
 
         <div className="sidebar-footer">
-          <button className="btn ghost" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-            {theme === 'dark' ? '☀ Mode terang' : '☾ Mode gelap'}
+          <button
+            className={collapsed ? 'icon-btn footer-icon' : 'btn ghost'}
+            title={theme === 'dark' ? 'Mode terang' : 'Mode gelap'}
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          >
+            {theme === 'dark' ? '☀' : '☾'}{!collapsed && (theme === 'dark' ? ' Mode terang' : ' Mode gelap')}
           </button>
-          <div className="user-chip">
-            <div className="user-avatar">{initials(displayName)}</div>
-            <div>
-              <div className="u-name">{displayName}</div>
-              <div className="u-role">{profile ? `${profile.role}${profile.team ? ' · ' + profile.team : ''}` : '…'}</div>
+          {collapsed ? (
+            <>
+              <div className="user-avatar" title={`${displayName} · ${profile?.role || ''}`}>{initials(displayName)}</div>
+              <button className="icon-btn footer-icon" title="Keluar" onClick={logout}><LogoutIcon /></button>
+            </>
+          ) : (
+            <div className="user-chip">
+              <div className="user-avatar">{initials(displayName)}</div>
+              <div>
+                <div className="u-name">{displayName}</div>
+                <div className="u-role">{profile ? `${profile.role}${profile.team ? ' · ' + profile.team : ''}` : '…'}</div>
+              </div>
+              <button className="icon-btn" title="Keluar" onClick={logout}><LogoutIcon /></button>
             </div>
-            <button className="icon-btn" title="Keluar" onClick={() => supabase.auth.signOut()}>⎋</button>
-          </div>
+          )}
         </div>
       </aside>
 
