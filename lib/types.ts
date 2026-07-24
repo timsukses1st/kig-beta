@@ -112,6 +112,28 @@ export interface RecapReport {
   created_at: string;
 }
 
+export interface Complaint {
+  id: string;
+  category: string;
+  title: string;
+  detail: string | null;
+  status: string;
+  reporter_id: string | null;
+  reporter_name: string | null;
+  handler_name: string | null;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+export interface ComplaintMessage {
+  id: string;
+  complaint_id: string;
+  author_id: string | null;
+  author_name: string | null;
+  message: string;
+  created_at: string;
+}
+
 export interface ActivityLog {
   id: number;
   actor_email: string | null;

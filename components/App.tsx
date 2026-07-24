@@ -11,8 +11,9 @@ import AccessView from '@/components/AccessView';
 import CalendarView from '@/components/CalendarView';
 import ReportView from '@/components/ReportView';
 import RecapView from '@/components/RecapView';
+import ComplaintView from '@/components/ComplaintView';
 
-type View = 'board' | 'kalender' | 'tracker' | 'ads' | 'recap' | 'laporan' | 'log' | 'access';
+type View = 'board' | 'kalender' | 'tracker' | 'ads' | 'recap' | 'laporan' | 'komplain' | 'log' | 'access';
 
 const NAV: { key: View; label: string }[] = [
   { key: 'board', label: 'Board Pipeline' },
@@ -21,6 +22,7 @@ const NAV: { key: View; label: string }[] = [
   { key: 'ads', label: 'Ads Tracker' },
   { key: 'recap', label: 'Recap Report' },
   { key: 'laporan', label: 'Laporan Kerja' },
+  { key: 'komplain', label: 'Komplain' },
   { key: 'log', label: 'Log Aktivitas' },
   { key: 'access', label: 'Kelola Akses' },
 ];
@@ -70,6 +72,13 @@ const ICON_PATHS: Record<View, React.ReactNode> = {
       <polyline points="14 3 14 8 19 8" />
       <line x1="9" y1="13" x2="15" y2="13" />
       <line x1="9" y1="17" x2="13" y2="17" />
+    </>
+  ),
+  komplain: (
+    <>
+      <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-3.3A8.4 8.4 0 1 1 21 11.5z" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="15.5" x2="12" y2="15.6" />
     </>
   ),
   log: (
@@ -389,6 +398,7 @@ export default function App() {
           <RecapView profile={profile} projects={projects} projectFilter={activeProject} />
         )}
         {view === 'laporan' && <ReportView projects={projects} projectFilter={activeProject} />}
+        {view === 'komplain' && <ComplaintView profile={profile} />}
         {view === 'log' && canSeeLog && <LogView />}
         {view === 'access' && isSuper && <AccessView selfId={session.user.id} onAccountsChanged={loadAccounts} />}
       </main>
