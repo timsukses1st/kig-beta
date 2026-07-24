@@ -6,7 +6,7 @@ import { statusDef, type Account, type ContentRow } from '@/lib/types';
 
 interface Props {
   accounts: Account[];
-  accountFilter: string; // 'all' | account id
+  projectFilter: string; // 'all' | project id
 }
 
 const DAY_NAMES = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
@@ -17,7 +17,7 @@ const MONTH_NAMES = [
 
 const stripMd = (s: string) => s.replace(/\*\*/g, '');
 
-export default function CalendarView({ accounts, accountFilter }: Props) {
+export default function CalendarView({ accounts, projectFilter }: Props) {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth()); // 0-11
@@ -38,8 +38,8 @@ export default function CalendarView({ accounts, accountFilter }: Props) {
   useEffect(() => { load(); }, [load]);
 
   const filtered = useMemo(
-    () => rows.filter((r) => accountFilter === 'all' || r.account_id === accountFilter),
-    [rows, accountFilter]
+    () => rows.filter((r) => projectFilter === 'all' || r.project_id === projectFilter),
+    [rows, projectFilter]
   );
 
   const byDate = useMemo(() => {

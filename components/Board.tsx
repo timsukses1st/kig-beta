@@ -5,19 +5,21 @@ import { supabase } from '@/lib/supabase';
 import {
   DIVISIONS, PILLAR_LABEL, STATUSES,
   canEditRow, initials, statusDef,
-  type Account, type ContentRow, type ContentStatus, type Division, type Pillar, type Profile, type TeamMember, type ContentNote,
+  type Account, type ContentRow, type ContentStatus, type Division, type Pillar, type Profile, type TeamMember, type ContentNote, type ContentRequest, type Project,
 } from '@/lib/types';
 
 interface Props {
   profile: Profile | null;
   accounts: Account[];
-  accountFilter: string; // 'all' | account id
+  projects: Project[];
+  projectFilter: string; // 'all' | project id
 }
 
 type Range = 'today' | 'yesterday' | 'week' | 'all';
 
 const EMPTY_FORM = {
   title: '',
+  project_id: '',
   account_id: '',
   pillar: 'lagi_ramai' as Pillar,
   status: 'drafting' as ContentStatus,
@@ -69,8 +71,9 @@ const htmlToMd = (node: Node): string => {
   return out;
 };
 
-export default function Board({ profile, accounts, accountFilter }: Props) {
+export default function Board({ profile, accounts, projects, projectFilter }: Props) {
   const [rows, setRows] = useState<ContentRow[]>([]);
+  const [requests, setRequests] = useState<ContentRequest[]>([]);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [division, setDivision] = useState<Division>('semua');
@@ -87,12 +90,14 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [c, m] = await Promise.all([
+    const [c, m, rq] = await Promise.all([
       supabase.from('contents').select('*').order('updated_at', { ascending: false }),
       supabase.from('team_members').select('*').eq('is_active', true).order('name'),
+      supabase.from('content_requests').select('*').eq('status', 'pending').order('requested_date', { ascending: true }),
     ]);
     setRows((c.data as ContentRow[]) || []);
     setMembers((m.data as TeamMember[]) || []);
+    setRequests((rq.data as ContentRequest[]) || []);
     setLoading(false);
   }, []);
 
@@ -113,8 +118,13 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
   }, [range]);
 
   const filtered = useMemo(
-    () => rows.filter((r) => (accountFilter === 'all' || r.account_id === accountFilter) && inRange(r)),
-    [rows, accountFilter, inRange]
+    () => rows.filter((r) => (projectFilter === 'all' || r.project_id === projectFilter) && inRange(r)),
+    [rows, projectFilter, inRange]
+  );
+
+  const visibleRequests = useMemo(
+    () => requests.filter((rq) => projectFilter === 'all' || rq.project_id === projectFilter),
+    [requests, projectFilter]
   );
 
   const divCounts = useMemo(() => {
@@ -138,6 +148,8 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
   }, [filtered]);
 
   const accName = (id: string | null) => accounts.find((a) => a.id === id)?.handle || 'Akun belum ditentukan';
+  const accountsOfProject = (projId: string) =>
+    projId ? accounts.filter((a) => a.project_id === projId || !a.project_id) : accounts;
   const personName = (id: string | null) => members.find((m) => m.id === id)?.name || null;
   const membersOf = (team: 'creative' | 'distribution' | 'ads') =>
     members.filter((m) => m.team === team || m.team === 'delta');
@@ -157,7 +169,7 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
     setNotes([]);
     setNewNote('');
     setOpenNoteField(null);
-    setForm({ ...EMPTY_FORM, account_id: accountFilter !== 'all' ? accountFilter : (accounts[0]?.id || '') });
+    setForm({ ...EMPTY_FORM, project_id: projectFilter !== 'all' ? projectFilter : (projects[0]?.id || '') });
     setError('');
     setModalOpen(true);
   };
@@ -199,6 +211,7 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
     loadNotes(row.id);
     setForm({
       title: row.title,
+      project_id: row.project_id || '',
       account_id: row.account_id || '',
       pillar: row.pillar,
       status: row.status,
@@ -224,6 +237,7 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
     setSaving(true); setError('');
     const payload = {
       title: form.title.trim(),
+      project_id: form.project_id || null,
       account_id: form.account_id || null,
       pillar: form.pillar,
       pic_creative: form.pic_creative || null,
@@ -296,6 +310,68 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
     setFlowBusy(false);
     if (err) { setError('Gagal memindahkan — cek wewenang tim.'); return; }
     setModalOpen(false);
+    load();
+  };
+
+  const canRequest = canAcc || profile?.team === 'pm';
+  const canLift = canAcc || profile?.team === 'creative' || profile?.team === 'delta';
+  const [reqModalOpen, setReqModalOpen] = useState(false);
+  const [reqForm, setReqForm] = useState({ title: '', account_id: '', requested_date: '', note: '' });
+  const [reqBusy, setReqBusy] = useState<string | null>(null);
+  const [reqError, setReqError] = useState('');
+
+  const submitRequest = async () => {
+    if (!reqForm.title.trim() || !profile) { setReqError('Judul/brief request wajib diisi.'); return; }
+    setReqBusy('submit');
+    setReqError('');
+    const { error: err } = await supabase.from('content_requests').insert({
+      title: reqForm.title.trim(),
+      project_id: projectFilter !== 'all' ? projectFilter : (projects[0]?.id || null),
+      account_id: reqForm.account_id || null,
+      requested_date: reqForm.requested_date || null,
+      note: reqForm.note.trim() || null,
+      requester_id: profile.id,
+      requester_name: profile.full_name || profile.email,
+    });
+    setReqBusy(null);
+    if (err) { setReqError('Gagal mengirim request — hanya PM/lead yang bisa request.'); return; }
+    setReqModalOpen(false);
+    setReqForm({ title: '', account_id: '', requested_date: '', note: '' });
+    load();
+  };
+
+  const liftRequest = async (rq: ContentRequest) => {
+    if (!profile) return;
+    setReqBusy(rq.id);
+    const ins = await supabase
+      .from('contents')
+      .insert({
+        title: rq.title,
+        project_id: rq.project_id,
+        account_id: rq.account_id,
+        pillar: 'lagi_ramai',
+        status: 'drafting' as ContentStatus,
+        publish_date: rq.requested_date,
+        production_note: ['Request oleh ' + (rq.requester_name || 'PM'), rq.note].filter(Boolean).join(' · '),
+        created_by: profile.id,
+      })
+      .select('id')
+      .single();
+    if (!ins.error && ins.data) {
+      await supabase.from('content_requests')
+        .update({ status: 'diangkat', created_content_id: (ins.data as { id: string }).id })
+        .eq('id', rq.id);
+    }
+    setReqBusy(null);
+    if (ins.error) window.alert('Gagal mengangkat request — cek wewenang.');
+    load();
+  };
+
+  const rejectRequest = async (rq: ContentRequest) => {
+    if (!window.confirm(`Tolak request "${rq.title}"?`)) return;
+    setReqBusy(rq.id);
+    await supabase.from('content_requests').update({ status: 'ditolak' }).eq('id', rq.id);
+    setReqBusy(null);
     load();
   };
 
@@ -405,6 +481,11 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
           <span className="top-note">{filtered.length} konten</span>
         </div>
         <div className="top-actions">
+          {canRequest && (
+            <button className="btn" onClick={() => { setReqModalOpen(true); setReqError(''); }}>
+              ✦ Request konten{visibleRequests.length > 0 ? ` (${visibleRequests.length})` : ''}
+            </button>
+          )}
           {canCreate && <button className="btn primary" onClick={openCreate}>+ Konten baru</button>}
         </div>
       </div>
@@ -434,6 +515,47 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
         <p className="empty">Memuat board…</p>
       ) : (
         <div className="board">
+          {(division === 'semua' || division === 'creative') && visibleRequests.length > 0 && (
+            <div className="column">
+              <div className="column-head">
+                <span className="st-square" style={{ background: 'var(--req)' }} />
+                <h3 style={{ color: 'var(--req)' }}>Request</h3>
+                <span className="count">{visibleRequests.length}</span>
+                <span className="owner-chip">pm</span>
+              </div>
+              <div className="col-body">
+                {visibleRequests.map((rq) => (
+                  <div className="card" key={rq.id} style={{ ['--card-accent' as never]: 'var(--req)' }}>
+                    <div className="card-title">{rq.title}</div>
+                    <div className="card-acc">
+                      <span className="sq" />
+                      {accName(rq.account_id)}
+                    </div>
+                    {rq.note && <div className="req-note">{rq.note}</div>}
+                    {canLift && (
+                      <button className="acc-btn lift-btn" disabled={reqBusy === rq.id}
+                        onClick={(e) => { e.stopPropagation(); liftRequest(rq); }}>
+                        {reqBusy === rq.id ? 'Memproses…' : '↑ Angkat → Drafting'}
+                      </button>
+                    )}
+                    {canAcc && (
+                      <button className="btn ghost req-reject" disabled={reqBusy === rq.id}
+                        onClick={(e) => { e.stopPropagation(); rejectRequest(rq); }}>
+                        Tolak
+                      </button>
+                    )}
+                    <div className="card-foot">
+                      <span className="flag-dot" style={{ background: 'var(--req)' }} />
+                      {rq.requested_date
+                        ? 'Butuh ' + new Date(rq.requested_date + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
+                        : 'Tanpa target tanggal'}
+                      <span className="pic-avatar" title={rq.requester_name || 'PM'}>{initials(rq.requester_name)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {columns.map((s) => (
             <div className="column" key={s.key}>
               <div className="column-head">
@@ -488,6 +610,71 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {reqModalOpen && (
+        <div className="overlay">
+          <div className="modal" style={{ maxWidth: 440 }}>
+            <div className="modal-head">
+              <div>
+                <div className="modal-eyebrow">
+                  <span className="sq" style={{ background: 'var(--req)' }} />
+                  Request konten · PM
+                </div>
+                <div className="modal-title">Request Konten Baru</div>
+                <div className="modal-sub">Masuk antrian Request di board — Creative yang mengangkatnya jadi Drafting.</div>
+              </div>
+              <button className="btn ghost modal-close" onClick={() => setReqModalOpen(false)}>✕</button>
+            </div>
+            <div style={{ padding: '18px 24px' }}>
+              <div className="field">
+                <label>Judul / brief singkat</label>
+                <textarea
+                  ref={growRef}
+                  value={reqForm.title}
+                  onInput={autoGrow}
+                  onChange={(e) => setReqForm({ ...reqForm, title: e.target.value })}
+                  placeholder="mis. Konten testimoni mitra untuk campaign Agustus"
+                />
+              </div>
+              <div className="field-row">
+                <div className="field">
+                  <label>Akun</label>
+                  <select value={reqForm.account_id} onChange={(e) => setReqForm({ ...reqForm, account_id: e.target.value })}>
+                    <option value="">— pilih —</option>
+                    {accountsOfProject(projectFilter !== 'all' ? projectFilter : '').map((a) => (
+                      <option key={a.id} value={a.id}>{a.handle}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Tanggal dibutuhkan</label>
+                  <input type="date" value={reqForm.requested_date}
+                    onChange={(e) => setReqForm({ ...reqForm, requested_date: e.target.value })} />
+                </div>
+              </div>
+              <div className="field">
+                <label>Catatan (opsional)</label>
+                <textarea
+                  ref={growRef}
+                  value={reqForm.note}
+                  onInput={autoGrow}
+                  onChange={(e) => setReqForm({ ...reqForm, note: e.target.value })}
+                  placeholder="Konteks, referensi, atau keperluan campaign"
+                />
+              </div>
+              {reqError && <p className="error-msg">{reqError}</p>}
+            </div>
+            <div className="modal-foot">
+              <div className="right">
+                <button className="btn" onClick={() => setReqModalOpen(false)} disabled={reqBusy === 'submit'}>Batal</button>
+                <button className="btn primary" onClick={submitRequest} disabled={reqBusy === 'submit' || !reqForm.title.trim()}>
+                  {reqBusy === 'submit' ? 'Mengirim…' : 'Kirim Request'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -599,12 +786,23 @@ export default function Board({ profile, accounts, accountFilter }: Props) {
               </div>
               <div>
                 <div className="modal-col-label">Detail &amp; aset</div>
+                <div className="field">
+                  <label>Project</label>
+                  <select
+                    value={form.project_id}
+                    disabled={readOnly}
+                    onChange={(e) => setForm({ ...form, project_id: e.target.value, account_id: '' })}
+                  >
+                    <option value="">— pilih —</option>
+                    {projects.map((pr) => <option key={pr.id} value={pr.id}>{pr.name}</option>)}
+                  </select>
+                </div>
                 <div className="field-row">
                   <div className="field">
                     <label>Akun{noteBtn('account')}</label>
                     <select value={form.account_id} disabled={readOnly} onChange={(e) => setForm({ ...form, account_id: e.target.value })}>
                       <option value="">— pilih —</option>
-                      {accounts.map((a) => <option key={a.id} value={a.id}>{a.handle}</option>)}
+                      {accountsOfProject(form.project_id).map((a) => <option key={a.id} value={a.id}>{a.handle}</option>)}
                     </select>
                   </div>
                   <div className="field">

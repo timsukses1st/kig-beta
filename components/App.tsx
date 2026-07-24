@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { initials, type Account, type Profile } from '@/lib/types';
+import { initials, type Account, type Profile, type Project } from '@/lib/types';
 import Login from '@/components/Login';
 import Board from '@/components/Board';
 import LogView from '@/components/LogView';
@@ -143,8 +143,12 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [activeAccount, setActiveAccount] = useState<string>('all');
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [activeProject, setActiveProject] = useState<string>('all');
   const [accMenuOpen, setAccMenuOpen] = useState(false);
+  const [newProjName, setNewProjName] = useState('');
+  const [newProjLabel, setNewProjLabel] = useState('');
+  const [addingProj, setAddingProj] = useState(false);
   const [view, setView] = useState<View>('board');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [collapsed, setCollapsed] = useState(false);
@@ -175,12 +179,31 @@ export default function App() {
     setAccounts((data as Account[]) || []);
   }, []);
 
+  const loadProjects = useCallback(async () => {
+    const { data } = await supabase.from('projects').select('*').eq('is_active', true).order('name');
+    setProjects((data as Project[]) || []);
+  }, []);
+
+  const addProject = async () => {
+    if (!newProjName.trim()) return;
+    setAddingProj(true);
+    const { error } = await supabase.from('projects').insert({
+      name: newProjName.trim(),
+      label: newProjLabel.trim() || null,
+    });
+    setAddingProj(false);
+    if (error) { window.alert('Gagal menambah project — hanya lead/superadmin yang bisa.'); return; }
+    setNewProjName(''); setNewProjLabel('');
+    loadProjects();
+  };
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       if (data.session) {
         loadProfile(data.session.user.id);
         loadAccounts();
+        loadProjects();
       }
       setBooting(false);
     });
@@ -189,10 +212,11 @@ export default function App() {
       if (s) {
         loadProfile(s.user.id);
         loadAccounts();
+        loadProjects();
       } else setProfile(null);
     });
     return () => sub.subscription.unsubscribe();
-  }, [loadProfile, loadAccounts]);
+  }, [loadProfile, loadAccounts, loadProjects]);
 
   if (booting) return null;
   if (!session) return <Login />;
@@ -205,7 +229,8 @@ export default function App() {
     return true;
   });
 
-  const activeAcc = accounts.find((a) => a.id === activeAccount) || null;
+  const activeProj = projects.find((p) => p.id === activeProject) || null;
+  const canAddProject = profile?.role === 'superadmin' || profile?.role === 'manager';
   const displayName = profile?.full_name || session.user.email?.split('@')[0] || 'User';
   const logout = () => supabase.auth.signOut();
 
@@ -231,32 +256,57 @@ export default function App() {
 
         {!collapsed && (
           <>
-            <div className="section-label">Akun</div>
+            <div className="section-label">Project</div>
             <button className="account-picker" onClick={() => setAccMenuOpen(!accMenuOpen)}>
-              <div className="acc-avatar">{activeAcc ? initials(activeAcc.handle.replace('@', '')) : '∗'}</div>
+              <div className="acc-avatar">{activeProj ? initials(activeProj.name) : '∗'}</div>
               <div>
-                <div className="acc-name">{activeAcc ? activeAcc.handle : 'Semua akun'}</div>
-                <div className="acc-sub">{activeAcc ? activeAcc.label || 'akun media' : `${accounts.length} akun aktif`}</div>
+                <div className="acc-name">{activeProj ? activeProj.name : 'Semua project'}</div>
+                <div className="acc-sub">
+                  {activeProj
+                    ? activeProj.label || `${accounts.filter((a) => a.project_id === activeProj.id).length} akun`
+                    : `${projects.length} project aktif`}
+                </div>
               </div>
               <span className="acc-caret">{accMenuOpen ? '▴' : '▾'}</span>
             </button>
             {accMenuOpen && (
               <div className="account-menu">
-                <button className="account-option" onClick={() => { setActiveAccount('all'); setAccMenuOpen(false); }}>
+                <button className="account-option" onClick={() => { setActiveProject('all'); setAccMenuOpen(false); }}>
                   <div className="acc-avatar" style={{ background: 'var(--raised)', color: 'var(--text)' }}>∗</div>
-                  <div className="acc-name">Semua akun</div>
-                  {activeAccount === 'all' && <span className="check">✓</span>}
+                  <div className="acc-name">Semua project</div>
+                  {activeProject === 'all' && <span className="check">✓</span>}
                 </button>
-                {accounts.map((a) => (
-                  <button key={a.id} className="account-option" onClick={() => { setActiveAccount(a.id); setAccMenuOpen(false); }}>
-                    <div className="acc-avatar">{initials(a.handle.replace('@', ''))}</div>
+                {projects.map((pr) => (
+                  <button key={pr.id} className="account-option" onClick={() => { setActiveProject(pr.id); setAccMenuOpen(false); }}>
+                    <div className="acc-avatar">{initials(pr.name)}</div>
                     <div>
-                      <div className="acc-name">{a.handle}</div>
-                      {a.label && <div className="acc-sub">{a.label}</div>}
+                      <div className="acc-name">{pr.name}</div>
+                      <div className="acc-sub">
+                        {pr.label || `${accounts.filter((a) => a.project_id === pr.id).length} akun`}
+                      </div>
                     </div>
-                    {activeAccount === a.id && <span className="check">✓</span>}
+                    {activeProject === pr.id && <span className="check">✓</span>}
                   </button>
                 ))}
+                {canAddProject && (
+                  <div className="proj-add">
+                    <input
+                      placeholder="Nama project baru"
+                      value={newProjName}
+                      onChange={(e) => setNewProjName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && addProject()}
+                    />
+                    <input
+                      placeholder="Label (opsional)"
+                      value={newProjLabel}
+                      onChange={(e) => setNewProjLabel(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && addProject()}
+                    />
+                    <button className="btn primary" onClick={addProject} disabled={addingProj || !newProjName.trim()}>
+                      {addingProj ? 'Menyimpan…' : '+ Project baru'}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
             <div className="section-label">Menu</div>
@@ -303,8 +353,10 @@ export default function App() {
       </aside>
 
       <main className="main">
-        {view === 'board' && <Board profile={profile} accounts={accounts} accountFilter={activeAccount} />}
-        {view === 'kalender' && <CalendarView accounts={accounts} accountFilter={activeAccount} />}
+        {view === 'board' && (
+          <Board profile={profile} accounts={accounts} projects={projects} projectFilter={activeProject} />
+        )}
+        {view === 'kalender' && <CalendarView accounts={accounts} projectFilter={activeProject} />}
         {view === 'tracker' && (
           <Placeholder
             title="Tracker Distribution"
@@ -317,7 +369,7 @@ export default function App() {
             desc="Rekap budget, status kampanye, kode ads, dan hasil reach per konten yang diiklankan. Menyusul di fase berikutnya."
           />
         )}
-        {view === 'laporan' && <ReportView accounts={accounts} accountFilter={activeAccount} />}
+        {view === 'laporan' && <ReportView projects={projects} projectFilter={activeProject} />}
         {view === 'log' && canSeeLog && <LogView />}
         {view === 'access' && isSuper && <AccessView selfId={session.user.id} onAccountsChanged={loadAccounts} />}
       </main>

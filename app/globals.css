@@ -624,3 +624,12 @@ td select {
   overflow: hidden;
 }
 .feed-detail { color: var(--text-3); }
+
+/* ================= Tambah project di sidebar ================= */
+.proj-add { display: flex; flex-direction: column; gap: 6px; padding: 8px 6px 4px; border-top: 1px solid var(--border); margin-top: 4px; }
+.proj-add input {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 7px; padding: 7px 9px; font-size: 12.5px; outline: none; width: 100%;
+}
+.proj-add input:focus { border-color: var(--accent); }
+.proj-add .btn { width: 100%; font-size: 12px; }

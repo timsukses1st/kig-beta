@@ -1,5 +1,5 @@
 export type Role = 'superadmin' | 'manager' | 'tim';
-export type Team = 'delta' | 'creative' | 'distribution' | 'ads';
+export type Team = 'delta' | 'creative' | 'distribution' | 'ads' | 'pm';
 export type ContentStatus =
   | 'drafting' | 'review'
   | 'siap_upload' | 'terjadwal'
@@ -25,16 +25,26 @@ export interface TeamMember {
   created_at: string;
 }
 
+export interface Project {
+  id: string;
+  name: string;
+  label: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
 export interface Account {
   id: string;
   handle: string;
   label: string | null;
   is_active: boolean;
+  project_id: string | null;
 }
 
 export interface ContentRow {
   id: string;
   title: string;
+  project_id: string | null;
   account_id: string | null;
   pillar: Pillar;
   status: ContentStatus;
@@ -60,6 +70,20 @@ export interface ContentNote {
   author_name: string | null;
   field: string;
   note: string;
+  created_at: string;
+}
+
+export interface ContentRequest {
+  id: string;
+  title: string;
+  project_id: string | null;
+  account_id: string | null;
+  requested_date: string | null;
+  note: string | null;
+  requester_id: string | null;
+  requester_name: string | null;
+  status: string;
+  created_content_id: string | null;
   created_at: string;
 }
 
@@ -125,6 +149,7 @@ export const TEAM_EDITABLE: Record<Team, ContentStatus[]> = {
   creative: ['drafting', 'review'],
   distribution: ['siap_upload', 'terjadwal'],
   ads: ['published', 'diiklankan'],
+  pm: [],
 };
 
 export const TEAM_TARGETABLE: Record<Team, ContentStatus[]> = {
@@ -132,6 +157,7 @@ export const TEAM_TARGETABLE: Record<Team, ContentStatus[]> = {
   creative: ['drafting', 'review'],
   distribution: ['siap_upload', 'terjadwal', 'published'],
   ads: ['published', 'diiklankan'],
+  pm: [],
 };
 
 export function canEditRow(profile: Profile | null, status: ContentStatus): boolean {

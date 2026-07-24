@@ -4,12 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import {
   STATUSES, initials, statusDef,
-  type Account, type ContentRow, type TeamMember, type Team,
+  type ContentRow, type Project, type TeamMember, type Team,
 } from '@/lib/types';
 
 interface Props {
-  accounts: Account[];
-  accountFilter: string;
+  projects: Project[];
+  projectFilter: string;
 }
 
 type Period = 'month' | 'last30' | 'quarter' | 'all';
@@ -31,7 +31,7 @@ interface Stat {
   late: number;
 }
 
-export default function ReportView({ accounts, accountFilter }: Props) {
+export default function ReportView({ projects, projectFilter }: Props) {
   const [rows, setRows] = useState<ContentRow[]>([]);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,11 +64,11 @@ export default function ReportView({ accounts, accountFilter }: Props) {
   const scoped = useMemo(
     () =>
       rows.filter((r) => {
-        if (accountFilter !== 'all' && r.account_id !== accountFilter) return false;
+        if (projectFilter !== 'all' && r.project_id !== projectFilter) return false;
         if (startDate && new Date(r.created_at) < startDate) return false;
         return true;
       }),
-    [rows, accountFilter, startDate]
+    [rows, projectFilter, startDate]
   );
 
   const picIdsOf = (r: ContentRow) =>
@@ -111,9 +111,9 @@ export default function ReportView({ accounts, accountFilter }: Props) {
   }, [scoped]);
 
   const accLabel =
-    accountFilter === 'all'
-      ? 'semua akun'
-      : accounts.find((a) => a.id === accountFilter)?.handle || 'akun';
+    projectFilter === 'all'
+      ? 'semua project'
+      : projects.find((p) => p.id === projectFilter)?.name || 'project';
 
   const exportCsv = () => {
     const head = ['Nama', 'Tim', 'Total', ...STATUSES.map((s) => s.label), 'Tayang', 'Lewat deadline'];

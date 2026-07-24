@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { initials, type Account, type Profile, type Role, type Team, type TeamMember } from '@/lib/types';
+import { initials, type Account, type Profile, type Project, type Role, type Team, type TeamMember } from '@/lib/types';
 
 const ROLES: Role[] = ['superadmin', 'manager', 'tim'];
-const TEAMS: (Team | '')[] = ['', 'delta', 'creative', 'distribution', 'ads'];
+const TEAMS: (Team | '')[] = ['', 'delta', 'creative', 'distribution', 'ads', 'pm'];
 const MEMBER_TEAMS: Team[] = ['creative', 'distribution', 'ads', 'delta'];
 
 interface Props {
@@ -16,6 +16,8 @@ interface Props {
 export default function AccessView({ selfId, onAccountsChanged }: Props) {
   const [users, setUsers] = useState<Profile[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [newAccProject, setNewAccProject] = useState('');
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState('');
@@ -27,14 +29,16 @@ export default function AccessView({ selfId, onAccountsChanged }: Props) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [u, a, m] = await Promise.all([
+    const [u, a, m, pr] = await Promise.all([
       supabase.from('profiles').select('*').order('created_at'),
       supabase.from('accounts').select('*').order('handle'),
       supabase.from('team_members').select('*').order('team').order('name'),
+      supabase.from('projects').select('*').order('name'),
     ]);
     setUsers((u.data as Profile[]) || []);
     setAccounts((a.data as Account[]) || []);
     setMembers((m.data as TeamMember[]) || []);
+    setProjects((pr.data as Project[]) || []);
     setLoading(false);
   }, []);
 
@@ -57,6 +61,7 @@ export default function AccessView({ selfId, onAccountsChanged }: Props) {
     const { error } = await supabase.from('accounts').insert({
       handle: handle.startsWith('@') ? handle : '@' + handle,
       label: newLabel.trim() || null,
+      project_id: newAccProject || null,
     });
     if (error) { flash('Gagal menambah akun (handle mungkin sudah ada).'); return; }
     setNewHandle(''); setNewLabel('');
@@ -169,23 +174,36 @@ export default function AccessView({ selfId, onAccountsChanged }: Props) {
 
             {/* ================= AKUN MEDIA ================= */}
             <div className="section-title" style={{ marginTop: 28 }}>Akun Media</div>
-            <p className="section-hint">Opsi dropdown Akun di Board & sidebar. Akun yang sudah dipakai konten tidak bisa dihapus — nonaktifkan saja.</p>
+            <p className="section-hint">Akun media milik tiap project. Akun yang sudah dipakai konten tidak bisa dihapus — nonaktifkan saja. Project ditambah dari selector di sidebar.</p>
             <div className="add-row">
               <input placeholder="@handle akun" value={newHandle} onChange={(e) => setNewHandle(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addAccount()} />
               <input placeholder="Label (opsional) — mis. Media film" value={newLabel} onChange={(e) => setNewLabel(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addAccount()} />
+              <select value={newAccProject} onChange={(e) => setNewAccProject(e.target.value)}>
+                <option value="">— project —</option>
+                {projects.map((pr) => <option key={pr.id} value={pr.id}>{pr.name}</option>)}
+              </select>
               <button className="btn primary" onClick={addAccount} disabled={!newHandle.trim()}>+ Tambah</button>
             </div>
             <div className="table-wrap">
               <table>
                 <thead>
-                  <tr><th>Akun</th><th>Label</th><th>Status</th><th style={{ width: 90 }}></th></tr>
+                  <tr><th>Akun</th><th>Project</th><th>Label</th><th>Status</th><th style={{ width: 90 }}></th></tr>
                 </thead>
                 <tbody>
                   {accounts.map((a) => (
                     <tr key={a.id}>
                       <td><b>{a.handle}</b></td>
+                      <td>
+                        <select
+                          value={a.project_id || ''}
+                          onChange={(e) => supabase.from('accounts').update({ project_id: e.target.value || null }).eq('id', a.id).then(() => { load(); onAccountsChanged?.(); })}
+                        >
+                          <option value="">—</option>
+                          {projects.map((pr) => <option key={pr.id} value={pr.id}>{pr.name}</option>)}
+                        </select>
+                      </td>
                       <td>{a.label || '—'}</td>
                       <td>
                         <button className="btn ghost" onClick={() => toggleAccount(a)}>
@@ -196,7 +214,7 @@ export default function AccessView({ selfId, onAccountsChanged }: Props) {
                       <td><button className="btn ghost danger-text" onClick={() => deleteAccount(a)}>Hapus</button></td>
                     </tr>
                   ))}
-                  {accounts.length === 0 && <tr><td colSpan={4} className="empty">Belum ada akun.</td></tr>}
+                  {accounts.length === 0 && <tr><td colSpan={5} className="empty">Belum ada akun.</td></tr>}
                 </tbody>
               </table>
             </div>
