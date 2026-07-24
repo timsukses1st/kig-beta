@@ -4,6 +4,32 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { initials, type ActivityLog } from '@/lib/types';
 
+const STATUS_LABEL: Record<string, string> = {
+  ide: 'Ide',
+  drafting: 'Drafting',
+  review: 'Review',
+  siap_upload: 'Siap Upload',
+  terjadwal: 'Terjadwal',
+  published: 'Published',
+  diiklankan: 'Diiklankan',
+};
+
+// judul konten sering panjang (bold ** + link) — rapikan untuk log
+const cleanTitle = (raw: string | null) => {
+  if (!raw) return '';
+  const t = raw
+    .replace(/\*\*/g, '')
+    .replace(/https?:\/\/\S+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return t.length > 55 ? t.slice(0, 55).trimEnd() + '…' : t;
+};
+
+const cleanDetail = (raw: string | null) => {
+  if (!raw) return '';
+  return raw.replace(/[a-z_]+/g, (w) => STATUS_LABEL[w] || w);
+};
+
 const BADGE: Record<string, string> = {
   membuat: 'BUAT',
   mengubah: 'UPDATE',
@@ -62,8 +88,10 @@ export default function LogView() {
                   <div>
                     <div className="feed-text">
                       <b>{actor}</b> {l.action}{' '}
-                      {l.entity_title && <span className="obj">&ldquo;{l.entity_title}&rdquo;</span>}
-                      {l.detail && <> — {l.detail}</>}
+                      {l.entity_title && (
+                        <span className="obj" title={l.entity_title}>&ldquo;{cleanTitle(l.entity_title)}&rdquo;</span>
+                      )}
+                      {l.detail && <span className="feed-detail"> — {cleanDetail(l.detail)}</span>}
                     </div>
                     <div className="feed-time">{fmt(l.created_at)}</div>
                   </div>
