@@ -633,3 +633,19 @@ td select {
 }
 .proj-add input:focus { border-color: var(--accent); }
 .proj-add .btn { width: 100%; font-size: 12px; }
+
+/* ================= Dropdown & kontrol native ikut tema ================= */
+:root, [data-theme='dark'] { color-scheme: dark; }
+[data-theme='light'] { color-scheme: light; }
+
+select option {
+  background: var(--panel);
+  color: var(--text);
+}
+
+.proj-add select {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 7px; padding: 7px 9px; font-size: 12.5px;
+  outline: none; width: 100%;
+}
+.proj-add select:focus { border-color: var(--accent); }
