@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { initials, type Account, type Profile, type Project, type Role, type Team, type TeamMember } from '@/lib/types';
+import { initials, VERTICALS, type Account, type Profile, type Project, type Role, type Team, type TeamMember } from '@/lib/types';
 
 const ROLES: Role[] = ['superadmin', 'manager', 'tim'];
 const TEAMS: (Team | '')[] = ['', 'delta', 'creative', 'distribution', 'ads', 'pm'];
@@ -134,7 +134,7 @@ export default function AccessView({ selfId, onAccountsChanged }: Props) {
             <div className="table-wrap">
               <table>
                 <thead>
-                  <tr><th>User</th><th>Role</th><th>Team</th><th>Status</th></tr>
+                  <tr><th>User</th><th>Role</th><th>Team</th><th>Vertical</th><th>Status</th></tr>
                 </thead>
                 <tbody>
                   {users.map((u) => (
@@ -161,6 +161,16 @@ export default function AccessView({ selfId, onAccountsChanged }: Props) {
                         </select>
                       </td>
                       <td>
+                        <select
+                          value={u.vertical || ''}
+                          disabled={u.id === selfId}
+                          onChange={(e) => updateUser(u.id, { vertical: e.target.value || null })}
+                        >
+                          <option value="">semua</option>
+                          {VERTICALS.map((v) => <option key={v.key} value={v.key}>{v.key}</option>)}
+                        </select>
+                      </td>
+                      <td>
                         <button className="btn ghost" disabled={u.id === selfId} onClick={() => updateUser(u.id, { is_active: !u.is_active })}>
                           <span className="status-dot" style={{ background: u.is_active ? 'var(--green)' : 'var(--text-3)' }} />
                           {u.is_active ? 'Aktif' : 'Nonaktif'}
@@ -168,6 +178,48 @@ export default function AccessView({ selfId, onAccountsChanged }: Props) {
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* ================= PROJECT ================= */}
+            <div className="section-title" style={{ marginTop: 28 }}>Project &amp; Vertical</div>
+            <p className="section-hint">
+              Vertical menentukan siapa yang boleh melihat: orang <b>KC</b> tidak melihat project <b>GME</b>, dan sebaliknya.
+              Pilih <b>KIG</b> untuk project lintas grup. User tanpa vertical (&ldquo;semua&rdquo;) melihat seluruh project.
+              Project baru ditambahkan dari selector di sidebar.
+            </p>
+            <div className="table-wrap" style={{ marginBottom: 8 }}>
+              <table>
+                <thead>
+                  <tr><th>Project</th><th>Vertical</th><th>Label</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                  {projects.map((pr) => (
+                    <tr key={pr.id}>
+                      <td><b>{pr.name}</b></td>
+                      <td>
+                        <select
+                          value={pr.vertical || ''}
+                          onChange={(e) => supabase.from('projects').update({ vertical: e.target.value || null }).eq('id', pr.id).then(() => { load(); onAccountsChanged?.(); })}
+                        >
+                          <option value="">—</option>
+                          {VERTICALS.map((v) => <option key={v.key} value={v.key}>{v.key}</option>)}
+                        </select>
+                      </td>
+                      <td>{pr.label || '—'}</td>
+                      <td>
+                        <button
+                          className="btn ghost"
+                          onClick={() => supabase.from('projects').update({ is_active: !pr.is_active }).eq('id', pr.id).then(() => { load(); onAccountsChanged?.(); })}
+                        >
+                          <span className="status-dot" style={{ background: pr.is_active ? 'var(--green)' : 'var(--text-3)' }} />
+                          {pr.is_active ? 'Aktif' : 'Nonaktif'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {projects.length === 0 && <tr><td colSpan={4} className="empty">Belum ada project.</td></tr>}
                 </tbody>
               </table>
             </div>

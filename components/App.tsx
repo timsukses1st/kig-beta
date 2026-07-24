@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { initials, type Account, type Profile, type Project } from '@/lib/types';
+import { initials, VERTICALS, type Account, type Profile, type Project, type Vertical } from '@/lib/types';
 import Login from '@/components/Login';
 import Board from '@/components/Board';
 import LogView from '@/components/LogView';
@@ -148,6 +148,7 @@ export default function App() {
   const [accMenuOpen, setAccMenuOpen] = useState(false);
   const [newProjName, setNewProjName] = useState('');
   const [newProjLabel, setNewProjLabel] = useState('');
+  const [newProjVertical, setNewProjVertical] = useState<Vertical>('KC');
   const [addingProj, setAddingProj] = useState(false);
   const [view, setView] = useState<View>('board');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
@@ -190,6 +191,7 @@ export default function App() {
     const { error } = await supabase.from('projects').insert({
       name: newProjName.trim(),
       label: newProjLabel.trim() || null,
+      vertical: newProjVertical,
     });
     setAddingProj(false);
     if (error) { window.alert('Gagal menambah project — hanya lead/superadmin yang bisa.'); return; }
@@ -263,7 +265,7 @@ export default function App() {
                 <div className="acc-name">{activeProj ? activeProj.name : 'Semua project'}</div>
                 <div className="acc-sub">
                   {activeProj
-                    ? activeProj.label || `${accounts.filter((a) => a.project_id === activeProj.id).length} akun`
+                    ? `${activeProj.vertical || '—'} · ${activeProj.label || accounts.filter((a) => a.project_id === activeProj.id).length + ' akun'}`
                     : `${projects.length} project aktif`}
                 </div>
               </div>
@@ -282,6 +284,7 @@ export default function App() {
                     <div>
                       <div className="acc-name">{pr.name}</div>
                       <div className="acc-sub">
+                        {pr.vertical ? pr.vertical + ' · ' : ''}
                         {pr.label || `${accounts.filter((a) => a.project_id === pr.id).length} akun`}
                       </div>
                     </div>
@@ -302,6 +305,9 @@ export default function App() {
                       onChange={(e) => setNewProjLabel(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && addProject()}
                     />
+                    <select value={newProjVertical} onChange={(e) => setNewProjVertical(e.target.value as Vertical)}>
+                      {VERTICALS.map((v) => <option key={v.key} value={v.key}>{v.key}</option>)}
+                    </select>
                     <button className="btn primary" onClick={addProject} disabled={addingProj || !newProjName.trim()}>
                       {addingProj ? 'Menyimpan…' : '+ Project baru'}
                     </button>

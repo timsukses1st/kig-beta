@@ -13,6 +13,7 @@ export interface Profile {
   full_name: string | null;
   role: Role;
   team: Team | null;
+  vertical: string | null;
   is_active: boolean;
   created_at: string;
 }
@@ -25,10 +26,18 @@ export interface TeamMember {
   created_at: string;
 }
 
+export type Vertical = 'KC' | 'GME' | 'KIG';
+export const VERTICALS: { key: Vertical; label: string }[] = [
+  { key: 'KC', label: 'KC — Kahfi Corp' },
+  { key: 'GME', label: 'GME — Gala Mega Enigma' },
+  { key: 'KIG', label: 'KIG — lintas grup' },
+];
+
 export interface Project {
   id: string;
   name: string;
   label: string | null;
+  vertical: string | null;
   is_active: boolean;
   created_at: string;
 }
