@@ -105,6 +105,8 @@ export interface RecapReport {
   file_path: string | null;
   file_name: string | null;
   file_size: number | null;
+  link_url: string | null;
+  link_type: string | null;
   uploaded_by: string | null;
   uploader_name: string | null;
   created_at: string;

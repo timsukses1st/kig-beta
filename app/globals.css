@@ -661,3 +661,17 @@ select option {
   border: 1px solid var(--border-strong); border-radius: 6px;
   padding: 4px 10px; margin-right: 10px; font-size: 12px; cursor: pointer;
 }
+
+/* ================= Recap: link & pratinjau slide ================= */
+.link-tag {
+  display: inline-block; font-family: var(--mono); font-size: 10px;
+  letter-spacing: .06em; color: var(--accent);
+  background: var(--accent-soft); border-radius: 20px; padding: 2px 9px; margin-bottom: 4px;
+}
+.preview-modal { max-width: 920px; }
+.preview-frame { padding: 0 24px; }
+.preview-frame iframe {
+  width: 100%; aspect-ratio: 16 / 9; border: 1px solid var(--border);
+  border-radius: 10px; background: #000;
+}
+td a.btn { text-decoration: none; display: inline-block; }

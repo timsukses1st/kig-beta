@@ -12,6 +12,34 @@ interface Props {
 
 const MAX_MB = 20;
 
+const detectLinkType = (url: string): string => {
+  const u = url.toLowerCase();
+  if (u.includes('docs.google.com/presentation')) return 'slides';
+  if (u.includes('docs.google.com/document')) return 'docs';
+  if (u.includes('docs.google.com/spreadsheets')) return 'sheets';
+  if (u.includes('drive.google.com')) return 'drive';
+  return 'lainnya';
+};
+
+const LINK_LABEL: Record<string, string> = {
+  slides: 'Google Slides',
+  docs: 'Google Docs',
+  sheets: 'Google Sheets',
+  drive: 'Google Drive',
+  lainnya: 'Link',
+};
+
+// ubah URL Google Slides jadi versi embed untuk pratinjau
+const toEmbed = (url: string): string | null => {
+  const m = url.match(/\/presentation\/d\/([a-zA-Z0-9_-]+)/);
+  if (m) return `https://docs.google.com/presentation/d/${m[1]}/embed?start=false&loop=false`;
+  const d = url.match(/\/document\/d\/([a-zA-Z0-9_-]+)/);
+  if (d) return `https://docs.google.com/document/d/${d[1]}/preview`;
+  const s = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  if (s) return `https://docs.google.com/spreadsheets/d/${s[1]}/preview`;
+  return null;
+};
+
 const fmtSize = (b: number | null) => {
   if (!b) return '—';
   if (b < 1024 * 1024) return (b / 1024).toFixed(0) + ' KB';
@@ -24,7 +52,8 @@ export default function RecapView({ profile, projects, projectFilter }: Props) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [form, setForm] = useState({ title: '', period: '', note: '', project_id: '' });
+  const [form, setForm] = useState({ title: '', period: '', note: '', project_id: '', link_url: '' });
+  const [preview, setPreview] = useState<RecapReport | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -45,6 +74,7 @@ export default function RecapView({ profile, projects, projectFilter }: Props) {
       period: '',
       note: '',
       project_id: projectFilter !== 'all' ? projectFilter : (projects[0]?.id || ''),
+      link_url: '',
     });
     setFile(null);
     setError('');
@@ -54,6 +84,9 @@ export default function RecapView({ profile, projects, projectFilter }: Props) {
   const submit = async () => {
     if (!profile) return;
     if (!form.title.trim()) { setError('Judul laporan wajib diisi.'); return; }
+    const link = form.link_url.trim();
+    if (!link && !file) { setError('Isi link Google Slides atau unggah file — salah satu wajib ada.'); return; }
+    if (link && !/^https?:\/\//i.test(link)) { setError('Link harus diawali https://'); return; }
     if (file && file.size > MAX_MB * 1024 * 1024) {
       setError(`Ukuran file maksimal ${MAX_MB} MB. Untuk file besar, unggah ke Drive lalu tempel linknya di catatan.`);
       return;
@@ -81,6 +114,8 @@ export default function RecapView({ profile, projects, projectFilter }: Props) {
       file_path: filePath,
       file_name: file?.name || null,
       file_size: file?.size || null,
+      link_url: link || null,
+      link_type: link ? detectLinkType(link) : null,
       uploaded_by: profile.id,
       uploader_name: profile.full_name || profile.email,
     });
@@ -131,7 +166,7 @@ export default function RecapView({ profile, projects, projectFilter }: Props) {
             <table>
               <thead>
                 <tr>
-                  <th>Laporan</th><th>Project</th><th>Periode</th><th>File</th><th>Diunggah</th><th style={{ width: 150 }}></th>
+                  <th>Laporan</th><th>Project</th><th>Periode</th><th>Berkas</th><th>Diunggah</th><th style={{ width: 190 }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -144,12 +179,16 @@ export default function RecapView({ profile, projects, projectFilter }: Props) {
                     <td>{projName(r.project_id)}</td>
                     <td>{r.period || '—'}</td>
                     <td>
-                      {r.file_name ? (
+                      {r.link_url && (
+                        <div className="link-tag">{LINK_LABEL[r.link_type || 'lainnya']}</div>
+                      )}
+                      {r.file_name && (
                         <>
                           <div style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.file_name}</div>
                           <div className="sub">{fmtSize(r.file_size)}</div>
                         </>
-                      ) : '—'}
+                      )}
+                      {!r.link_url && !r.file_name && '—'}
                     </td>
                     <td>
                       <span className="row-avatar">{initials(r.uploader_name)}</span>
@@ -159,6 +198,12 @@ export default function RecapView({ profile, projects, projectFilter }: Props) {
                       </div>
                     </td>
                     <td>
+                      {r.link_url && toEmbed(r.link_url) && (
+                        <button className="btn ghost" onClick={() => setPreview(r)}>▶ Lihat</button>
+                      )}
+                      {r.link_url && (
+                        <a className="btn ghost" href={r.link_url} target="_blank" rel="noopener noreferrer">Buka ↗</a>
+                      )}
                       {r.file_path && <button className="btn ghost" onClick={() => download(r)}>↓ Unduh</button>}
                       {canDelete(r) && <button className="btn ghost danger-text" onClick={() => remove(r)}>Hapus</button>}
                     </td>
@@ -169,9 +214,42 @@ export default function RecapView({ profile, projects, projectFilter }: Props) {
           )}
         </div>
         <p className="cal-legend">
-          Maksimal {MAX_MB} MB per file (PDF, gambar, spreadsheet). File video sebaiknya tetap di Drive — cukup tempel linknya di catatan.
+          Laporan bisa berupa <b>link Google Slides/Docs/Sheets</b> (bisa dipratinjau langsung di sini) atau file unggahan maks {MAX_MB} MB.
+          File video sebaiknya tetap di Drive — cukup tempel linknya.
         </p>
       </div>
+
+      {preview && (
+        <div className="overlay" onClick={(e) => e.target === e.currentTarget && setPreview(null)}>
+          <div className="modal preview-modal">
+            <div className="modal-head">
+              <div>
+                <div className="modal-eyebrow">
+                  <span className="sq" style={{ background: 'var(--accent)' }} />
+                  {LINK_LABEL[preview.link_type || 'lainnya']}
+                </div>
+                <div className="modal-title">{preview.title}</div>
+                <div className="modal-sub">{preview.period || 'Tanpa periode'} · {projName(preview.project_id)}</div>
+              </div>
+              <button className="btn ghost modal-close" onClick={() => setPreview(null)}>✕</button>
+            </div>
+            <div className="preview-frame">
+              <iframe
+                src={toEmbed(preview.link_url || '') || ''}
+                title={preview.title}
+                allowFullScreen
+              />
+            </div>
+            <div className="modal-foot">
+              <span className="foot-note">Pratinjau hanya tampil bila akses link terbuka untuk tim.</span>
+              <div className="right">
+                <a className="btn" href={preview.link_url || '#'} target="_blank" rel="noopener noreferrer">Buka di tab baru ↗</a>
+                <button className="btn primary" onClick={() => setPreview(null)}>Tutup</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {open && (
         <div className="overlay">
@@ -214,7 +292,23 @@ export default function RecapView({ profile, projects, projectFilter }: Props) {
                 </div>
               </div>
               <div className="field">
-                <label>File laporan</label>
+                <label>
+                  Link Google Slides / Docs / Sheets
+                  {/^https?:\/\//i.test(form.link_url.trim()) && (
+                    <a className="open-link" href={form.link_url.trim()} target="_blank" rel="noopener noreferrer">Buka ↗</a>
+                  )}
+                </label>
+                <input
+                  value={form.link_url}
+                  onChange={(e) => setForm({ ...form, link_url: e.target.value })}
+                  placeholder="https://docs.google.com/presentation/d/…"
+                />
+                <div className="hint">
+                  Pastikan akses link disetel &ldquo;siapa saja yang memiliki link&rdquo; agar tim bisa membuka.
+                </div>
+              </div>
+              <div className="field">
+                <label>Atau unggah file</label>
                 <input
                   ref={fileRef}
                   type="file"
