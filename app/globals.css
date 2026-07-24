@@ -675,3 +675,23 @@ select option {
   border-radius: 10px; background: #000;
 }
 td a.btn { text-decoration: none; display: inline-block; }
+
+/* ================= Recap: grup tombol aksi ================= */
+.recap-actions {
+  display: flex; align-items: center; gap: 6px;
+  justify-content: flex-end; flex-wrap: nowrap;
+}
+.btn.act {
+  padding: 5px 10px; font-size: 12px; font-weight: 600;
+  border-color: var(--border); background: var(--raised);
+  white-space: nowrap;
+}
+.btn.act:hover { border-color: var(--border-strong); background: var(--hover); }
+.icon-del {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; flex-shrink: 0;
+  border: 1px solid transparent; background: transparent;
+  color: var(--text-3); border-radius: 7px;
+  transition: color .12s, background .12s, border-color .12s;
+}
+.icon-del:hover { color: var(--red); border-color: var(--red); background: var(--hover); }
