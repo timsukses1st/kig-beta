@@ -166,7 +166,7 @@ export default function RecapView({ profile, projects, projectFilter }: Props) {
             <table>
               <thead>
                 <tr>
-                  <th>Laporan</th><th>Project</th><th>Periode</th><th>Berkas</th><th>Diunggah</th><th style={{ width: 190 }}></th>
+                  <th>Laporan</th><th>Project</th><th>Periode</th><th>Berkas</th><th>Diunggah</th><th style={{ width: 210 }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -198,14 +198,26 @@ export default function RecapView({ profile, projects, projectFilter }: Props) {
                       </div>
                     </td>
                     <td>
-                      {r.link_url && toEmbed(r.link_url) && (
-                        <button className="btn ghost" onClick={() => setPreview(r)}>▶ Lihat</button>
-                      )}
-                      {r.link_url && (
-                        <a className="btn ghost" href={r.link_url} target="_blank" rel="noopener noreferrer">Buka ↗</a>
-                      )}
-                      {r.file_path && <button className="btn ghost" onClick={() => download(r)}>↓ Unduh</button>}
-                      {canDelete(r) && <button className="btn ghost danger-text" onClick={() => remove(r)}>Hapus</button>}
+                      <div className="recap-actions">
+                        {r.link_url && toEmbed(r.link_url) && (
+                          <button className="btn act" onClick={() => setPreview(r)}>▶ Lihat</button>
+                        )}
+                        {r.link_url && (
+                          <a className="btn act" href={r.link_url} target="_blank" rel="noopener noreferrer">Buka ↗</a>
+                        )}
+                        {r.file_path && <button className="btn act" onClick={() => download(r)}>↓ Unduh</button>}
+                        {canDelete(r) && (
+                          <button className="icon-del" title="Hapus laporan" onClick={() => remove(r)}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                              <path d="M10 11v6M14 11v6" />
+                              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
