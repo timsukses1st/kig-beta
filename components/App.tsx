@@ -9,14 +9,16 @@ import Board from '@/components/Board';
 import LogView from '@/components/LogView';
 import AccessView from '@/components/AccessView';
 import CalendarView from '@/components/CalendarView';
+import ReportView from '@/components/ReportView';
 
-type View = 'board' | 'kalender' | 'tracker' | 'ads' | 'log' | 'access';
+type View = 'board' | 'kalender' | 'tracker' | 'ads' | 'laporan' | 'log' | 'access';
 
 const NAV: { key: View; label: string }[] = [
   { key: 'board', label: 'Board Pipeline' },
   { key: 'kalender', label: 'Kalender Tayang' },
   { key: 'tracker', label: 'Tracker' },
   { key: 'ads', label: 'Ads Tracker' },
+  { key: 'laporan', label: 'Laporan Kerja' },
   { key: 'log', label: 'Log Aktivitas' },
   { key: 'access', label: 'Kelola Akses' },
 ];
@@ -50,6 +52,14 @@ const ICON_PATHS: Record<View, React.ReactNode> = {
       <path d="M3 11v3l14 4V7L3 11z" />
       <path d="M20 9.5a3 3 0 0 1 0 6" />
       <path d="M7 14.6V19a1 1 0 0 0 1 1h2" />
+    </>
+  ),
+  laporan: (
+    <>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 3 14 8 19 8" />
+      <line x1="9" y1="13" x2="15" y2="13" />
+      <line x1="9" y1="17" x2="13" y2="17" />
     </>
   ),
   log: (
@@ -307,6 +317,7 @@ export default function App() {
             desc="Rekap budget, status kampanye, kode ads, dan hasil reach per konten yang diiklankan. Menyusul di fase berikutnya."
           />
         )}
+        {view === 'laporan' && <ReportView accounts={accounts} accountFilter={activeAccount} />}
         {view === 'log' && canSeeLog && <LogView />}
         {view === 'access' && isSuper && <AccessView selfId={session.user.id} onAccountsChanged={loadAccounts} />}
       </main>
