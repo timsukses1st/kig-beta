@@ -96,6 +96,20 @@ export interface ContentRequest {
   created_at: string;
 }
 
+export interface RecapReport {
+  id: string;
+  project_id: string | null;
+  title: string;
+  period: string | null;
+  note: string | null;
+  file_path: string | null;
+  file_name: string | null;
+  file_size: number | null;
+  uploaded_by: string | null;
+  uploader_name: string | null;
+  created_at: string;
+}
+
 export interface ActivityLog {
   id: number;
   actor_email: string | null;
